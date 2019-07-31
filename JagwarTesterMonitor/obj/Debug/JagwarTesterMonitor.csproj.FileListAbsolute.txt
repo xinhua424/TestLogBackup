@@ -1,0 +1,10 @@
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\bin\Debug\JagwarTesterMonitor.exe.config
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\bin\Debug\JagwarTesterMonitor.exe
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\bin\Debug\JagwarTesterMonitor.pdb
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\obj\Debug\JagwarTesterMonitor.Properties.Resources.resources
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\obj\Debug\JagwarTesterMonitor.csproj.GenerateResource.cache
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\obj\Debug\JagwarTesterMonitor.csproj.CoreCompileInputs.cache
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\obj\Debug\JagwarTesterMonitor.exe
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\obj\Debug\JagwarTesterMonitor.pdb
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\obj\Debug\JagwarTesterMonitor.JagwarTesterMonitor_MainForm.resources
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\JagwarTesterMonitor\obj\Debug\JagwarTesterMonitor.csprojAssemblyReference.cache

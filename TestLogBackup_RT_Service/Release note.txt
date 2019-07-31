@@ -1,0 +1,18 @@
+﻿1.0.5.0
+	Remove project name from the path in server.
+
+1.0.4.0
+	Compatible the scenario the logs move to Log\Pass\Processed or Log\Fail\Processed.
+
+1.0.3.0
+	Change the timer interval to 5 minutes.
+	Ignore the files fail uploading in next timer escaped event.
+	Log out the network before timer escaped event responding exits.
+
+1.0.2.0:
+	Add Pegatron branch.
+	Remove the CM name from the log path in server.
+	Add the machine name in the service log name.
+
+< 1.0.1.1: 
+	Initial version

@@ -1,0 +1,11 @@
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\bin\Debug\TestLogBackup.exe.config
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\bin\Debug\TestLogBackup.exe
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\bin\Debug\TestLogBackup.pdb
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\obj\Debug\TestLogBackup.MainForm.resources
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\obj\Debug\TestLogBackup.Properties.Resources.resources
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\obj\Debug\TestLogBackup.csproj.GenerateResource.cache
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\obj\Debug\TestLogBackup.csproj.CoreCompileInputs.cache
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\obj\Debug\TestLogBackup.exe
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\obj\Debug\TestLogBackup.pdb
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\bin\Debug\config.ini
+C:\SourceCode\JuulTestLogFileBackup\TestLogBackup\TestLogBackup\obj\Debug\TestLogBackup.csprojAssemblyReference.cache
