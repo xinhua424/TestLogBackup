@@ -15,7 +15,7 @@ namespace JagwarRetestDetection_Local
 {
     public partial class JagwarRetestDetector : Form
     {
-
+        //Released to Github
         //string afgLogRootPath = @"O:\TesterLogBackup_RT";
         string afgLogRootPath = @"D:\Juul Log\TesterLogBackup_RT";
         string pegaLogRootPath = @"D:\TestLog\Jagwar";
@@ -53,7 +53,7 @@ namespace JagwarRetestDetection_Local
                 }
             }
             Directory.CreateDirectory(@"C:\temp");
-            RecordWriter = new StreamWriter(@"C:\temp\RetestResult.txt");
+            //RecordWriter = new StreamWriter(@"C:\temp\RetestResult.txt");
 
             cmbProject.Items.Clear();
             cmbProject.Items.AddRange(new string[]{ "Jagwar","JagwarPlus","JagwarC"});
@@ -68,6 +68,7 @@ namespace JagwarRetestDetection_Local
         }
         private void BtDetectRetest_Click(object sender, EventArgs e)
         {
+            RecordWriter = new StreamWriter(@"C:\temp\RetestResult.txt");
             tbRecord.Text = "";
             DateTime dtStartDate, dtEndDate;
             dtStartDate = dtpStartDate.Value;
@@ -242,6 +243,7 @@ namespace JagwarRetestDetection_Local
                 }
 
             }
+            RecordWriter.Close();
         }
         private SingleResult ParseTestResult_Light(string fileName)
         {
