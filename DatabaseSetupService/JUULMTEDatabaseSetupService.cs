@@ -22,22 +22,21 @@ namespace DatabaseSetupService
         [DllImport("advapi32.dll", SetLastError = true)]
         private static extern bool SetServiceStatus(System.IntPtr handle, ref ServiceStatus serviceStatus);
 
-        string afgLogRootPath = @"D:\Juul Log\TesterLogBackup_RT\Jagwar";
-        string pegaLogRootPath = @"D:\TestLog\Jagwar";
+        readonly string afgLogRootPath = @"D:\Juul Log\TesterLogBackup_RT\Jagwar";
+        readonly string pegaLogRootPath = @"D:\TestLog\Jagwar";
         string logRootPath;
 
-        string LocalLogRootFolder = @"D:\JUUL Log";
-        string DatabaseRootFolder = @"D:\JUULMTEDatabase";
-        string JagwarDatabaseFile="Jagwar.db";
-        string JagwarPlusDatabaseFile="JagwarPlus.db";
-        string DBTable_Jagwar_FCT = "Jagwar_FCT";
-        string DBTable_Jagwar_SFG = "Jagwar_SFG";
-        string DBTable_Jagwar_FG00 = "Jagwar_FG00";
-        string DBTable_Jagwar_FG24 = "Jagwar_FG24";
-        string DBTable_JagwarPlus_FCT = "JagwarPlus_FCT";
-        string DBTable_JagwarPlus_SFG = "JagwarPlus_SFG";
-        string DBTable_JagwarPlus_FG00 = "JagwarPlus_FG00";
-        string DBTable_JagwarPlus_FG24 = "JagwarPlus_FG24";
+        readonly string DatabaseRootFolder = @"C:\JUULMTEDatabase";
+        readonly string JagwarDatabaseFile="Jagwar.db";
+        readonly string JagwarPlusDatabaseFile ="JagwarPlus.db";
+        readonly string DBTable_Jagwar_FCT = "Jagwar_FCT";
+        readonly string DBTable_Jagwar_SFG = "Jagwar_SFG";
+        readonly string DBTable_Jagwar_FG00 = "Jagwar_FG00";
+        readonly string DBTable_Jagwar_FG24 = "Jagwar_FG24";
+        readonly string DBTable_JagwarPlus_FCT = "JagwarPlus_FCT";
+        readonly string DBTable_JagwarPlus_SFG = "JagwarPlus_SFG";
+        readonly string DBTable_JagwarPlus_FG00 = "JagwarPlus_FG00";
+        readonly string DBTable_JagwarPlus_FG24 = "JagwarPlus_FG24";
 
         MTEDatabaseSetup DB_Jagwar, DB_JagwarPlus;
 
@@ -97,6 +96,7 @@ namespace DatabaseSetupService
 
         protected override void OnStart(string[] args)
         {
+            //Debugger.Launch();
             // Update the service state to Start Pending.
             ServiceStatus serviceStatus = new ServiceStatus();
             Log($"JUUL MTE Database setup service starts, version: {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}.");
@@ -131,47 +131,30 @@ namespace DatabaseSetupService
             timer.Stop();
 
             string[] stationPaths = Directory.GetDirectories(logRootPath);
-            foreach(string oneStationPath in stationPaths)
+            try
             {
-                StationCategory sc;
-                string station = oneStationPath.Split('\\').Last();
-                bool rightStation = Enum.TryParse(station, out sc);
-                if(!rightStation)
+                foreach (string oneStationPath in stationPaths)
                 {
-                    continue;
-                }
-                switch (sc)
-                {
-                    case StationCategory.FCT:
-                        Log("Start to go through FCT logs.");
-                        int fctLogOverallCount = 0;
-                        string[] FCT_TesterPaths = Directory.GetDirectories(oneStationPath);
-                        //If the service runs the 1st time, go through all of the logs, otherwise, only go through the yesterday and today folder.
-                        if (FetchedFileList_FCT.Count == 0)
-                        {
-                            foreach (string oneFCTTesterPath in FCT_TesterPaths)
+                    StationCategory sc;
+                    string station = oneStationPath.Split('\\').Last();
+                    bool rightStation = Enum.TryParse(station, out sc);
+                    if (!rightStation)
+                    {
+                        continue;
+                    }
+                    switch (sc)
+                    {
+                        case StationCategory.FCT:
+                            Log("Start to go through FCT logs.");
+                            int fctLogOverallCount = 0;
+                            string[] FCT_TesterPaths = Directory.GetDirectories(oneStationPath);
+                            //If the service runs the 1st time, go through all of the logs, otherwise, only go through the yesterday and today folder.
+                            if (FetchedFileList_FCT.Count == 0)
                             {
-                                string[] dateFoldersInOneFCTTester = Directory.GetDirectories(oneFCTTesterPath);
-                                foreach (string oneDateFolder_FCT in dateFoldersInOneFCTTester)
+                                foreach (string oneFCTTesterPath in FCT_TesterPaths)
                                 {
-                                    int fctLogCount_OneDay= FetchLogs_FCT(oneDateFolder_FCT);
-                                    Log($"{fctLogCount_OneDay} FCT logs are fetched from {oneFCTTesterPath.Split('\\').Last()} {oneDateFolder_FCT.Split('\\').Last()} into database.");
-                                    fctLogOverallCount += fctLogCount_OneDay;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            foreach (string oneFCTTesterPath in FCT_TesterPaths)
-                            {
-                                string date_yesterday = DateTime.Now.Subtract(TimeSpan.FromDays(1)).ToString("yyyy-MM-dd");
-                                string date_today = DateTime.Now.ToString("yyyy-MM-dd");
-                                bool checkYesterday = (DateTime.Now.Hour < 1);
-                                string[] dateFoldersInOneFCTTester = Directory.GetDirectories(oneFCTTesterPath);
-                                foreach (string oneDateFolder_FCT in dateFoldersInOneFCTTester)
-                                {
-                                    string folderName = oneDateFolder_FCT.Split('\\').Last();
-                                    if ((folderName.Contains(date_yesterday) && checkYesterday)||folderName.Contains(date_today))
+                                    string[] dateFoldersInOneFCTTester = Directory.GetDirectories(oneFCTTesterPath);
+                                    foreach (string oneDateFolder_FCT in dateFoldersInOneFCTTester)
                                     {
                                         int fctLogCount_OneDay = FetchLogs_FCT(oneDateFolder_FCT);
                                         Log($"{fctLogCount_OneDay} FCT logs are fetched from {oneFCTTesterPath.Split('\\').Last()} {oneDateFolder_FCT.Split('\\').Last()} into database.");
@@ -179,38 +162,38 @@ namespace DatabaseSetupService
                                     }
                                 }
                             }
-                        }
-                        Log($"{fctLogOverallCount} logs are fetched from FCT into database.");
-                        break;
-                    case StationCategory.SFG:
-                        Log("Start to go through SFG logs.");
-                        int sfgLogOverallCount = 0;
-                        string[] SFG_TesterPaths = Directory.GetDirectories(oneStationPath);
-                        if (FetchedFileList_SFG.Count == 0)
-                        {
-                            foreach (string oneSFGTesterPath in SFG_TesterPaths)
+                            else
                             {
-                                string[] dateFoldersInOneSFGTester = Directory.GetDirectories(oneSFGTesterPath);
-                                foreach (string oneDateFolder_SFG in dateFoldersInOneSFGTester)
+                                foreach (string oneFCTTesterPath in FCT_TesterPaths)
                                 {
-                                    int sfgLogCount_OneDay=FetchLogs_SFG(oneDateFolder_SFG);
-                                    Log($"{sfgLogCount_OneDay} SFG logs are fetched from {oneSFGTesterPath.Split('\\').Last()} {oneDateFolder_SFG.Split('\\').Last()} into database.");
-                                    sfgLogOverallCount += sfgLogCount_OneDay;
+                                    string date_yesterday = DateTime.Now.Subtract(TimeSpan.FromDays(1)).ToString("yyyy-MM-dd");
+                                    string date_today = DateTime.Now.ToString("yyyy-MM-dd");
+                                    bool checkYesterday = (DateTime.Now.Hour < 1);
+                                    string[] dateFoldersInOneFCTTester = Directory.GetDirectories(oneFCTTesterPath);
+                                    foreach (string oneDateFolder_FCT in dateFoldersInOneFCTTester)
+                                    {
+                                        string folderName = oneDateFolder_FCT.Split('\\').Last();
+                                        if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
+                                        {
+                                            int fctLogCount_OneDay = FetchLogs_FCT(oneDateFolder_FCT);
+                                            Log($"{fctLogCount_OneDay} FCT logs are fetched from {oneFCTTesterPath.Split('\\').Last()} {oneDateFolder_FCT.Split('\\').Last()} into database.");
+                                            fctLogOverallCount += fctLogCount_OneDay;
+                                        }
+                                    }
                                 }
                             }
-                        }
-                        else
-                        {
-                            foreach (string oneSFGTesterPath in SFG_TesterPaths)
+                            Log($"{fctLogOverallCount} logs are fetched from FCT into database.");
+                            break;
+                        case StationCategory.SFG:
+                            Log("Start to go through SFG logs.");
+                            int sfgLogOverallCount = 0;
+                            string[] SFG_TesterPaths = Directory.GetDirectories(oneStationPath);
+                            if (FetchedFileList_SFG.Count == 0)
                             {
-                                string date_yesterday = DateTime.Now.Subtract(TimeSpan.FromDays(1)).ToString("yyyy-MM-dd");
-                                string date_today = DateTime.Now.ToString("yyyy-MM-dd");
-                                bool checkYesterday = (DateTime.Now.Hour < 1);
-                                string[] dateFoldersInOneSFGTester = Directory.GetDirectories(oneSFGTesterPath);
-                                foreach (string oneDateFolder_SFG in dateFoldersInOneSFGTester)
+                                foreach (string oneSFGTesterPath in SFG_TesterPaths)
                                 {
-                                    string folderName = oneDateFolder_SFG.Split('\\').Last();
-                                    if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
+                                    string[] dateFoldersInOneSFGTester = Directory.GetDirectories(oneSFGTesterPath);
+                                    foreach (string oneDateFolder_SFG in dateFoldersInOneSFGTester)
                                     {
                                         int sfgLogCount_OneDay = FetchLogs_SFG(oneDateFolder_SFG);
                                         Log($"{sfgLogCount_OneDay} SFG logs are fetched from {oneSFGTesterPath.Split('\\').Last()} {oneDateFolder_SFG.Split('\\').Last()} into database.");
@@ -218,96 +201,124 @@ namespace DatabaseSetupService
                                     }
                                 }
                             }
-                        }
-                        Log($"{sfgLogOverallCount} logs are fetched from SFG into database.");
-                        break;
-                    case StationCategory.FG00:
-                        Log("Start to go through FG00 logs.");
-                        int fg00LogOverallCount = 0;
-                        string[] FG00_TesterPaths = Directory.GetDirectories(oneStationPath);
-                        if (FetchedFileList_FG00.Count == 0)
-                        {
-                            foreach (string oneFG00TesterPath in FG00_TesterPaths)
+                            else
                             {
-                                string[] dateFoldersInOneFG00Tester = Directory.GetDirectories(oneFG00TesterPath);
-                                foreach (string oneDateFolder_FG00 in dateFoldersInOneFG00Tester)
+                                foreach (string oneSFGTesterPath in SFG_TesterPaths)
                                 {
-                                    int fg00LogCount_OneDay = FetchLogs_FG00(oneDateFolder_FG00);
-                                    Log($"{fg00LogCount_OneDay} SFG logs are fetched from {oneFG00TesterPath.Split('\\').Last()} {oneDateFolder_FG00.Split('\\').Last()} into database.");
-                                    fg00LogOverallCount += fg00LogCount_OneDay;
+                                    string date_yesterday = DateTime.Now.Subtract(TimeSpan.FromDays(1)).ToString("yyyy-MM-dd");
+                                    string date_today = DateTime.Now.ToString("yyyy-MM-dd");
+                                    bool checkYesterday = (DateTime.Now.Hour < 1);
+                                    string[] dateFoldersInOneSFGTester = Directory.GetDirectories(oneSFGTesterPath);
+                                    foreach (string oneDateFolder_SFG in dateFoldersInOneSFGTester)
+                                    {
+                                        string folderName = oneDateFolder_SFG.Split('\\').Last();
+                                        if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
+                                        {
+                                            int sfgLogCount_OneDay = FetchLogs_SFG(oneDateFolder_SFG);
+                                            Log($"{sfgLogCount_OneDay} SFG logs are fetched from {oneSFGTesterPath.Split('\\').Last()} {oneDateFolder_SFG.Split('\\').Last()} into database.");
+                                            sfgLogOverallCount += sfgLogCount_OneDay;
+                                        }
+                                    }
                                 }
                             }
-                        }
-                        else
-                        {
-                            foreach (string oneFG00TesterPath in FG00_TesterPaths)
+                            Log($"{sfgLogOverallCount} logs are fetched from SFG into database.");
+                            break;
+                        case StationCategory.FG00:
+                            Log("Start to go through FG00 logs.");
+                            int fg00LogOverallCount = 0;
+                            string[] FG00_TesterPaths = Directory.GetDirectories(oneStationPath);
+                            if (FetchedFileList_FG00.Count == 0)
                             {
-                                string date_yesterday = DateTime.Now.Subtract(TimeSpan.FromDays(1)).ToString("yyyy-MM-dd");
-                                string date_today = DateTime.Now.ToString("yyyy-MM-dd");
-                                bool checkYesterday = (DateTime.Now.Hour < 1);
-                                string[] dateFoldersInOneFG00Tester = Directory.GetDirectories(oneFG00TesterPath);
-                                foreach (string oneDateFolder_FG00 in dateFoldersInOneFG00Tester)
+                                foreach (string oneFG00TesterPath in FG00_TesterPaths)
                                 {
-                                    string folderName = oneDateFolder_FG00.Split('\\').Last();
-                                    if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
+                                    string[] dateFoldersInOneFG00Tester = Directory.GetDirectories(oneFG00TesterPath);
+                                    foreach (string oneDateFolder_FG00 in dateFoldersInOneFG00Tester)
                                     {
                                         int fg00LogCount_OneDay = FetchLogs_FG00(oneDateFolder_FG00);
-                                        Log($"{fg00LogCount_OneDay} SFG logs are fetched from {oneFG00TesterPath.Split('\\').Last()} {oneDateFolder_FG00.Split('\\').Last()} into database.");
+                                        Log($"{fg00LogCount_OneDay} FG00 logs are fetched from {oneFG00TesterPath.Split('\\').Last()} {oneDateFolder_FG00.Split('\\').Last()} into database.");
                                         fg00LogOverallCount += fg00LogCount_OneDay;
                                     }
                                 }
                             }
-                        }
-                        Log($"{fg00LogOverallCount} logs are fetched from FG00 into database.");
-                        break;
-                    case StationCategory.FG24:
-                        Log("Start to go through FG24 logs.");
-                        int fg24LogOverallCount = 0;
-                        string[] FG24_TesterPaths = Directory.GetDirectories(oneStationPath);
-                        if (FetchedFileList_FG24.Count == 0)
-                        {
-                            foreach (string oneFG24TesterPath in FG24_TesterPaths)
+                            else
                             {
-                                string[] dateFoldersInOneFG24Tester = Directory.GetDirectories(oneFG24TesterPath);
-                                foreach (string oneDateFolder_FG24 in dateFoldersInOneFG24Tester)
+                                foreach (string oneFG00TesterPath in FG00_TesterPaths)
                                 {
-                                    int fg24LogCount_OneDay = FetchLogs_FG24(oneDateFolder_FG24);
-                                    Log($"{fg24LogCount_OneDay} SFG logs are fetched from {oneFG24TesterPath.Split('\\').Last()} {oneDateFolder_FG24.Split('\\').Last()} into database.");
-                                    fg24LogOverallCount += fg24LogCount_OneDay;
+                                    string date_yesterday = DateTime.Now.Subtract(TimeSpan.FromDays(1)).ToString("yyyy-MM-dd");
+                                    string date_today = DateTime.Now.ToString("yyyy-MM-dd");
+                                    bool checkYesterday = (DateTime.Now.Hour < 1);
+                                    string[] dateFoldersInOneFG00Tester = Directory.GetDirectories(oneFG00TesterPath);
+                                    foreach (string oneDateFolder_FG00 in dateFoldersInOneFG00Tester)
+                                    {
+                                        string folderName = oneDateFolder_FG00.Split('\\').Last();
+                                        if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
+                                        {
+                                            int fg00LogCount_OneDay = FetchLogs_FG00(oneDateFolder_FG00);
+                                            Log($"{fg00LogCount_OneDay} FG00 logs are fetched from {oneFG00TesterPath.Split('\\').Last()} {oneDateFolder_FG00.Split('\\').Last()} into database.");
+                                            fg00LogOverallCount += fg00LogCount_OneDay;
+                                        }
+                                    }
                                 }
                             }
-                        }
-                        else
-                        {
-                            foreach (string oneFG24TesterPath in FG24_TesterPaths)
+                            Log($"{fg00LogOverallCount} logs are fetched from FG00 into database.");
+                            break;
+                        case StationCategory.FG24:
+                            Log("Start to go through FG24 logs.");
+                            int fg24LogOverallCount = 0;
+                            string[] FG24_TesterPaths = Directory.GetDirectories(oneStationPath);
+                            if (FetchedFileList_FG24.Count == 0)
                             {
-                                string date_yesterday = DateTime.Now.Subtract(TimeSpan.FromDays(1)).ToString("yyyy-MM-dd");
-                                string date_today = DateTime.Now.ToString("yyyy-MM-dd");
-                                bool checkYesterday = (DateTime.Now.Hour < 1);
-                                string[] dateFoldersInOneFG24Tester = Directory.GetDirectories(oneFG24TesterPath);
-                                foreach (string oneDateFolder_FG24 in dateFoldersInOneFG24Tester)
+                                foreach (string oneFG24TesterPath in FG24_TesterPaths)
                                 {
-                                    string folderName = oneDateFolder_FG24.Split('\\').Last();
-                                    if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
+                                    string[] dateFoldersInOneFG24Tester = Directory.GetDirectories(oneFG24TesterPath);
+                                    foreach (string oneDateFolder_FG24 in dateFoldersInOneFG24Tester)
                                     {
                                         int fg24LogCount_OneDay = FetchLogs_FG24(oneDateFolder_FG24);
-                                        Log($"{fg24LogCount_OneDay} SFG logs are fetched from {oneFG24TesterPath.Split('\\').Last()} {oneDateFolder_FG24.Split('\\').Last()} into database.");
+                                        Log($"{fg24LogCount_OneDay} FG24 logs are fetched from {oneFG24TesterPath.Split('\\').Last()} {oneDateFolder_FG24.Split('\\').Last()} into database.");
                                         fg24LogOverallCount += fg24LogCount_OneDay;
                                     }
                                 }
                             }
-                        }
-                        Log($"{fg24LogOverallCount} logs are fetched from FG24 into database.");
-                        break;
-                    default:
-                        break;
+                            else
+                            {
+                                foreach (string oneFG24TesterPath in FG24_TesterPaths)
+                                {
+                                    string date_yesterday = DateTime.Now.Subtract(TimeSpan.FromDays(1)).ToString("yyyy-MM-dd");
+                                    string date_today = DateTime.Now.ToString("yyyy-MM-dd");
+                                    bool checkYesterday = (DateTime.Now.Hour < 1);
+                                    string[] dateFoldersInOneFG24Tester = Directory.GetDirectories(oneFG24TesterPath);
+                                    foreach (string oneDateFolder_FG24 in dateFoldersInOneFG24Tester)
+                                    {
+                                        string folderName = oneDateFolder_FG24.Split('\\').Last();
+                                        if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
+                                        {
+                                            int fg24LogCount_OneDay = FetchLogs_FG24(oneDateFolder_FG24);
+                                            Log($"{fg24LogCount_OneDay} FG24 logs are fetched from {oneFG24TesterPath.Split('\\').Last()} {oneDateFolder_FG24.Split('\\').Last()} into database.");
+                                            fg24LogOverallCount += fg24LogCount_OneDay;
+                                        }
+                                    }
+                                }
+                            }
+                            Log($"{fg24LogOverallCount} logs are fetched from FG24 into database.");
+                            break;
+                        default:
+                            break;
+                    }
                 }
+            }
+            catch(Exception ex)
+            {
+                Log($"Error happens. {ex.Message}");
+                EventLogWriter($"Error happens. {ex.Message}", EventCategory.ServiceTimerFault);
             }
             timer.Start();
         }
 
         protected override void OnStop()
         {
+            DB_Jagwar.DisconnectDatabase();
+            DB_JagwarPlus.DisconnectDatabase();
+            timer.Stop();
             EventLogWriter("JUUL MTE Database setup service stops.", EventCategory.ServiceStop);
             // Update the service state to Stop Pending.
             ServiceStatus serviceStatus = new ServiceStatus();
@@ -343,17 +354,17 @@ namespace DatabaseSetupService
                 {
                     //The file isn't in the fetched file list, add the file name to the list.
                     FetchedFileList_FCT[date].Add(fileName);
-                    string[] elemInFileName = fileName.Split('\\');
+                    string[] elemInFileName = fileName.Split('_');
                     string sn = elemInFileName[0];
                     //if(sn.Trim().Length<10) //The serial number length is 16 in AFG.
                     //{
                     //    continue;
                     //}
-                    string project = elemInFileName[2];
+                    string project = elemInFileName[2].ToUpper();
                     string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[9]);
 
                     bool newRecord;
-                    if (project == "Jagwar" || project == "JagwarC")
+                    if (project == "JAGWAR" || project == "JAGWARC")
                     {
                         newRecord= DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FCT, StationCategory.FCT, oneFilePath);
                     }
@@ -362,7 +373,9 @@ namespace DatabaseSetupService
                         newRecord= DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FCT, StationCategory.FCT, oneFilePath);
                     }
                     if (newRecord)
+                    {
                         count++;
+                    }
                 }
             }
             return count;
@@ -384,17 +397,17 @@ namespace DatabaseSetupService
                 {
                     //The file isn't in the fetched file list, add the file name to the list.
                     FetchedFileList_SFG[date].Add(fileName);
-                    string[] elemInFileName = fileName.Split('\\');
+                    string[] elemInFileName = fileName.Split('_');
                     string sn = elemInFileName[0];
                     //if (sn.Trim().Length < 10)  //The serial number is 15.
                     //{
                     //    continue;
                     //}
-                    string project = elemInFileName[3];
+                    string project = elemInFileName[3].ToUpper();
                     string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[9]);
 
                     bool newRecord;
-                    if (project == "Jagwar" || project == "JagwarC")
+                    if (project == "JAGWAR" || project == "JAGWARC")
                     {
                         newRecord=DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_SFG, StationCategory.SFG, oneFilePath);
                     }
@@ -425,17 +438,17 @@ namespace DatabaseSetupService
                 {
                     //The file isn't in the fetched file list, add the file name to the list.
                     FetchedFileList_FG00[date].Add(fileName);
-                    string[] elemInFileName = fileName.Split('\\');
+                    string[] elemInFileName = fileName.Split('_');
                     string sn = elemInFileName[0];
                     //if (sn.Trim().Length !=8)
                     //{
                     //    continue;
                     //}
-                    string project = elemInFileName[2];
+                    string project = elemInFileName[2].ToUpper();
                     string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[8]);
 
                     bool newRecord;
-                    if (project == "Jagwar" || project == "JagwarC")
+                    if (project == "JAGWAR" || project == "JAGWARC")
                     {
                         newRecord=DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FG00, StationCategory.FG00, oneFilePath);
                     }
@@ -466,17 +479,17 @@ namespace DatabaseSetupService
                 {
                     //The file isn't in the fetched file list, add the file name to the list.
                     FetchedFileList_FG24[date].Add(fileName);
-                    string[] elemInFileName = fileName.Split('\\');
+                    string[] elemInFileName = fileName.Split('_');
                     string sn = elemInFileName[0];
                     //if (sn.Trim().Length != 8)
                     //{
                     //    continue;
                     //}
-                    string project = elemInFileName[2];
+                    string project = elemInFileName[2].ToUpper();
                     string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[8]);
 
                     bool newRecord;
-                    if (project == "Jagwar" || project == "JagwarC")
+                    if (project == "JAGWAR" || project == "JAGWARC")
                     {
                         newRecord=DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FG24, StationCategory.FG24, oneFilePath);
                     }

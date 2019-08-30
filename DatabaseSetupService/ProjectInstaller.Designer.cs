@@ -33,11 +33,14 @@
             // 
             // serviceProcessInstaller1
             // 
+            this.serviceProcessInstaller1.Account = System.ServiceProcess.ServiceAccount.LocalSystem;
             this.serviceProcessInstaller1.Password = null;
             this.serviceProcessInstaller1.Username = null;
             // 
             // serviceInstaller1
             // 
+            this.serviceInstaller1.Description = "Set MTE database based on the log backuped in JUUL server.";
+            this.serviceInstaller1.DisplayName = "JUUL MTE Database Setup Service";
             this.serviceInstaller1.ServiceName = "JUULMTEDatabaseSetupService";
             this.serviceInstaller1.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 
