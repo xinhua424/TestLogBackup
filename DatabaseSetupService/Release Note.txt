@@ -1,0 +1,5 @@
+﻿Version 1.0.1.0
+Run the async log parsing tasks for each station.
+
+Version 1.0.0.0
+Initialization version.
