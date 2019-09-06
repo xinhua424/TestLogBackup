@@ -27,10 +27,38 @@ namespace JUUL.Manufacture.Database
         public Dictionary<string, object> fg00MeasurementValues = new Dictionary<string, object>();
         public Dictionary<string, object> fg24MeasurementValues = new Dictionary<string, object>();
 
+        private Dictionary<string, string> fctSummaryNames = new Dictionary<string, string>();
+        private Dictionary<string, string> sfgSummaryNames = new Dictionary<string, string>();
+        private Dictionary<string, object> fctSummaryValuesToBeAdded = new Dictionary<string, object>();
+        private Dictionary<string, object> sfgSummaryValuesToBeAdded = new Dictionary<string, object>();
+
+        public struct FCTHeader
+        {
+            public string uut_sn;
+            public string total_test_result;
+            public string fail_code;
+            public string start_time;
+            public string tester_id;
+            public string slot_id;
+            public string position_id;
+        }
+
+        public struct SFGHeader
+        {
+            public string uut_sn;
+            public string total_test_result;
+            public string fail_code;
+            public string start_time;
+            public string tester_id;
+            public string position_id;
+        }
+
         public MTEDatabaseSetup(string workspace, string dbName)
         {
             SetFCTMeasurement();
+            SetFCTSummary();
             SetSFGMeasurement();
+            SetSFGSummary();
             SetFG00Measurement();
             SetFG24Measurement();
             this.workspace = workspace;
@@ -67,6 +95,17 @@ namespace JUUL.Manufacture.Database
             fctMeasuremenNames.Add("ambient_sensor_temperature", "int");
         }
 
+        private void SetFCTSummary()
+        {
+            fctSummaryNames.Add("uut_sn", "varchar(20)");
+            fctSummaryNames.Add("total_test_result", "varchar(5)");
+            fctSummaryNames.Add("fail_code", "varchar(10)");
+            fctSummaryNames.Add("start_time", "date");
+            fctSummaryNames.Add("tester_id", "varchar(10)");
+            fctSummaryNames.Add("slot_id", "varchar(1)");
+            fctSummaryNames.Add("position_id", "varchar(1)");
+        }
+
         private void SetSFGMeasurement()
         {
             sfgMeasuremenNames.Add("uut_sn", "varchar(20)");
@@ -90,6 +129,17 @@ namespace JUUL.Manufacture.Database
             sfgMeasuremenNames.Add("tap_led_intensity", "int");
             sfgMeasuremenNames.Add("tap_led_saturation", "int");
             sfgMeasuremenNames.Add("tap_led_color", "varchar(10)");
+        }
+
+        private void SetSFGSummary()
+        {
+            sfgSummaryNames.Add("uut_sn", "varchar(20)");
+            sfgSummaryNames.Add("total_test_result", "varchar(5)");
+            sfgSummaryNames.Add("fail_code", "varchar(10)");
+            sfgSummaryNames.Add("start_time", "date");
+            sfgSummaryNames.Add("tester_id", "varchar(10)");
+            sfgSummaryNames.Add("slot_id", "varchar(1)");
+            sfgSummaryNames.Add("position_id", "varchar(1)");
         }
 
         private void SetFG00Measurement()
@@ -187,7 +237,7 @@ namespace JUUL.Manufacture.Database
 
         }
 
-        public void AddRow(string tableName, StationCategory sc)
+        public void AddRowForMeasurements(string tableName, StationCategory sc)
         {
             string variableNames = "";
             string values="";
@@ -255,6 +305,113 @@ namespace JUUL.Manufacture.Database
             command.ExecuteNonQuery();
         }
 
+        public void AddRowForSummary(string summaryTableName, FCTHeader FCTHeaderToBeAdded)
+        {
+            if (dbConnected)
+            {
+                DateTime dtInSummary, dtToBeAdded;
+                string sql = $"select uut_sn from {summaryTableName} where uut_sn={FCTHeaderToBeAdded.uut_sn}";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    //The SN exists in the summary table.
+                    FCTHeader FCTHeaderInSummary = new FCTHeader();
+                    FCTHeaderInSummary.uut_sn = (string)reader["uut_sn"];
+                    FCTHeaderInSummary.total_test_result = (string)reader["total_test_result"];
+                    FCTHeaderInSummary.fail_code = (string)reader["fail_code"];
+                    FCTHeaderInSummary.start_time = (string)reader["start_time"];
+                    FCTHeaderInSummary.tester_id = (string)reader["tester_id"];
+                    FCTHeaderInSummary.slot_id = (string)reader["slot_id"];
+                    FCTHeaderInSummary.position_id = (string)reader["position_id"];
+                    dtInSummary = DateTime.ParseExact(FCTHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                    dtToBeAdded = DateTime.ParseExact(FCTHeaderToBeAdded.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                    if (FCTHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                    {
+                        if ((FCTHeaderInSummary.total_test_result.ToUpper() == "FAIL" && dtToBeAdded > dtInSummary) || FCTHeaderInSummary.total_test_result.ToUpper() == "PASS")
+                        {
+                            //Update the records to the fct summary table.
+                            sql = $"UPDATE {summaryTableName} SET " +
+                                $"total_test_result='{FCTHeaderToBeAdded.total_test_result}' " +
+                                $"fail_code='{FCTHeaderToBeAdded.fail_code}' " +
+                                $"start_time='{FCTHeaderToBeAdded.start_time}' " +
+                                $"tester_id='{FCTHeaderToBeAdded.tester_id}' " +
+                                $"slot_id='{FCTHeaderToBeAdded.slot_id}' " +
+                                $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderInSummary.uut_sn}'";
+                            command = new SQLiteCommand(sql, databaseConnection);
+                            command.ExecuteNonQuery();
+                        }
+                    }
+                }
+                else
+                {
+                    //The SN doesn't exist in the summary table.
+                    sql = $"INSERT INTO {summaryTableName} (total_test_result,fail_code,start_time,tester_id,slot_id,position_id) values " +
+                        $"('{FCTHeaderToBeAdded.total_test_result}'," +
+                        $"'{FCTHeaderToBeAdded.fail_code}'," +
+                        $"'{FCTHeaderToBeAdded.start_time}'," +
+                        $"'{FCTHeaderToBeAdded.tester_id}'," +
+                        $"'{FCTHeaderToBeAdded.slot_id}'," +
+                        $"'{FCTHeaderToBeAdded.position_id}') " +
+                        $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderToBeAdded.uut_sn}'";
+                    command = new SQLiteCommand(sql, databaseConnection);
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void AddRowForSummary(string summaryTableName, SFGHeader SFGHeaderToBeAdded)
+        {
+            if (dbConnected)
+            {
+                DateTime dtInSummary, dtToBeAdded;
+                string sql = $"select uut_sn from {summaryTableName} where uut_sn={SFGHeaderToBeAdded.uut_sn}";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    //The SN exists in the summary table.
+                    SFGHeader SFGHeaderInSummary = new SFGHeader();
+                    SFGHeaderInSummary.uut_sn = (string)reader["uut_sn"];
+                    SFGHeaderInSummary.total_test_result = (string)reader["total_test_result"];
+                    SFGHeaderInSummary.fail_code = (string)reader["fail_code"];
+                    SFGHeaderInSummary.start_time = (string)reader["start_time"];
+                    SFGHeaderInSummary.tester_id = (string)reader["tester_id"];
+                    SFGHeaderInSummary.position_id = (string)reader["position_id"];
+                    dtInSummary = DateTime.ParseExact(SFGHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                    dtToBeAdded = DateTime.ParseExact(SFGHeaderToBeAdded.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                    if (SFGHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                    {
+                        if ((SFGHeaderInSummary.total_test_result.ToUpper() == "FAIL" && dtToBeAdded > dtInSummary) || SFGHeaderInSummary.total_test_result.ToUpper() == "PASS")
+                        {
+                            //Update the records to the SFG summary table.
+                            sql = $"UPDATE {summaryTableName} SET " +
+                                $"total_test_result='{SFGHeaderToBeAdded.total_test_result}' " +
+                                $"fail_code='{SFGHeaderToBeAdded.fail_code}' " +
+                                $"start_time='{SFGHeaderToBeAdded.start_time}' " +
+                                $"tester_id='{SFGHeaderToBeAdded.tester_id}' " +
+                                $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderInSummary.uut_sn}'";
+                            command = new SQLiteCommand(sql, databaseConnection);
+                            command.ExecuteNonQuery();
+                        }
+                    }
+                }
+                else
+                {
+                    //The SN doesn't exist in the summary table.
+                    sql = $"INSERT INTO {summaryTableName} (total_test_result,fail_code,start_time,tester_id,slot_id,position_id) values " +
+                        $"('{SFGHeaderToBeAdded.total_test_result}'," +
+                        $"'{SFGHeaderToBeAdded.fail_code}'," +
+                        $"'{SFGHeaderToBeAdded.start_time}'," +
+                        $"'{SFGHeaderToBeAdded.tester_id}'," +
+                        $"'{SFGHeaderToBeAdded.position_id}') " +
+                        $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderToBeAdded.uut_sn}'";
+                    command = new SQLiteCommand(sql, databaseConnection);
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
         public bool ParseLogIntoDB(string tableName, StationCategory sc, string logFullPath)
         {
             bool inserted = false;
@@ -286,9 +443,9 @@ namespace JUUL.Manufacture.Database
                                 fctMeasurementValues.Add("'" + measurementName + "'", value);
                             }
                         }
-                        if (!CheckRecordExists(tableName, (string)(fctMeasurementValues["'uut_sn'"]), (string)(fctMeasurementValues["'start_time'"])))
+                        if (!CheckRecordExists(tableName, (string)fctMeasurementValues["'uut_sn'"], (string)fctMeasurementValues["'start_time'"]))
                         {
-                            this.AddRow(tableName, sc);
+                            this.AddRowForMeasurements(tableName, sc);
                             inserted = true;
                         }
                         break;
@@ -317,7 +474,7 @@ namespace JUUL.Manufacture.Database
                         }
                         if (!CheckRecordExists(tableName, (string)(sfgMeasurementValues["'uut_sn'"]), (string)(sfgMeasurementValues["'start_time'"])))
                         {
-                            this.AddRow(tableName, sc);
+                            this.AddRowForMeasurements(tableName, sc);
                             inserted = true;
                         }
                         break;
@@ -346,7 +503,7 @@ namespace JUUL.Manufacture.Database
                         }
                         if (!CheckRecordExists(tableName, (string)(fg00MeasurementValues["'uut_sn'"]), (string)(fg00MeasurementValues["'start_time'"])))
                         {
-                            this.AddRow(tableName, sc);
+                            this.AddRowForMeasurements(tableName, sc);
                             inserted = true;
                         }
                         break;
@@ -375,7 +532,7 @@ namespace JUUL.Manufacture.Database
                         }
                         if (!CheckRecordExists(tableName, (string)(fg24MeasurementValues["'uut_sn'"]), (string)(fg24MeasurementValues["'start_time'"])))
                         {
-                            this.AddRow(tableName, sc);
+                            this.AddRowForMeasurements(tableName, sc);
                             inserted = true;
                         }
                         break;
@@ -384,6 +541,59 @@ namespace JUUL.Manufacture.Database
                 }
             }
             return inserted;
+        }
+
+        /// <summary>
+        /// Parse the FCT station overall result from test log file name.
+        /// </summary>
+        /// <param name="fctFileName">The test log file name.</param>
+        /// <returns></returns>
+        public FCTHeader ParseFCTHeader(string fctFileName)
+        {
+            string[] elemInFileName = fctFileName.Split('_');
+            FCTHeader fctHeaderToBeAdded = new FCTHeader();
+            fctHeaderToBeAdded.uut_sn = elemInFileName[0];
+            if (elemInFileName[1].Contains("FAIL"))
+            {
+                string[] finalResults = elemInFileName[1].Split(new char[] { '[', ']' });
+                fctHeaderToBeAdded.total_test_result = finalResults[0];
+                fctHeaderToBeAdded.fail_code = finalResults[1];
+            }
+            else
+            {
+                fctHeaderToBeAdded.total_test_result = elemInFileName[1];
+            }
+            fctHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
+            fctHeaderToBeAdded.tester_id = elemInFileName[5];
+            fctHeaderToBeAdded.slot_id = elemInFileName[6];
+            fctHeaderToBeAdded.position_id = elemInFileName[7];
+            return fctHeaderToBeAdded;
+        }
+
+        /// <summary>
+        /// Parse the SFG station overall result from test log file name.
+        /// </summary>
+        /// <param name="sfgFileName">The test log file name.</param>
+        /// <returns></returns>
+        public SFGHeader ParseSFGHeader(string sfgFileName)
+        {
+            string[] elemInFileName = sfgFileName.Split('_');
+            SFGHeader sfgHeaderToBeAdded = new SFGHeader();
+            sfgHeaderToBeAdded.uut_sn = elemInFileName[0];
+            if (elemInFileName[2].Contains("FAIL"))
+            {
+                string[] finalResults = elemInFileName[2].Split(new char[] { '[', ']' });
+                sfgHeaderToBeAdded.total_test_result = finalResults[0];
+                sfgHeaderToBeAdded.fail_code = finalResults[1];
+            }
+            else
+            {
+                sfgHeaderToBeAdded.total_test_result = elemInFileName[2];
+            }
+            sfgHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
+            sfgHeaderToBeAdded.tester_id = elemInFileName[6];
+            sfgHeaderToBeAdded.position_id = elemInFileName[7];
+            return sfgHeaderToBeAdded;
         }
 
         /// <summary>
@@ -414,6 +624,19 @@ namespace JUUL.Manufacture.Database
                 return reader.HasRows;
             }
             return true;
+        }
+
+        public bool CheckRecordExists(string tableName, string serialNumber)
+        {
+            if (dbConnected)
+            {
+                string sql = $"select uut_sn from {tableName} where uut_sn={serialNumber}";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                return reader.HasRows;
+            }
+            return true;
+
         }
 
         /// <summary>
@@ -448,7 +671,7 @@ namespace JUUL.Manufacture.Database
 
         public void CreateTable(string tableName, StationCategory sc)
         {
-            string sql = $"create table if not exists {tableName} (TSRID INTEGER PRIMARY KEY AUTOINCREMENT,";
+            string sql = $"create table if not exists {tableName} (";
             SQLiteCommand command;
             int count;
             switch (sc)
@@ -499,6 +722,44 @@ namespace JUUL.Manufacture.Database
                     break;
                 default:
                     break;
+            }
+            sql += ")";
+            command = new SQLiteCommand(sql, databaseConnection);
+            command.ExecuteNonQuery();
+        }
+
+        public void CreateFCTSummaryTable(string fctTableName)
+        {
+            //Create fct summary table.
+            string sql = $"create table if not exists {fctTableName} (";
+            SQLiteCommand command;
+            int count = 0;
+            foreach (var item in fctSummaryNames)
+            {
+                sql += item.Key + " " + item.Value;
+                if (++count < fctSummaryNames.Count)
+                {
+                    sql += ", ";
+                }
+            }
+            sql += ")";
+            command = new SQLiteCommand(sql, databaseConnection);
+            command.ExecuteNonQuery();
+        }
+
+        public void CreateSFGSummaryTable(string sfgTableName)
+        {
+            //Create sfg summary table.
+            string sql = $"create table if not exists {sfgTableName} (";
+            SQLiteCommand command;
+            int count = 0;
+            foreach (var item in sfgSummaryNames)
+            {
+                sql += item.Key + " " + item.Value;
+                if (++count < sfgSummaryNames.Count)
+                {
+                    sql += ", ";
+                }
             }
             sql += ")";
             command = new SQLiteCommand(sql, databaseConnection);

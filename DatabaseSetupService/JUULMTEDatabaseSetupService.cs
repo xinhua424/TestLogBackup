@@ -27,15 +27,19 @@ namespace DatabaseSetupService
         readonly string pegaLogRootPath = @"D:\TestLog\Jagwar";
         string logRootPath;
 
-        readonly string DatabaseRootFolder = @"C:\JUULMTEDatabase";
+        readonly string DatabaseRootFolder = @"D:\JUULMTEDatabase";
         readonly string JagwarDatabaseFile="Jagwar.db";
         readonly string JagwarPlusDatabaseFile ="JagwarPlus.db";
         readonly string DBTable_Jagwar_FCT = "Jagwar_FCT";
+        readonly string DBTable_Jagwar_FCT_Summary = "Jagwar_FCT_Summary";
         readonly string DBTable_Jagwar_SFG = "Jagwar_SFG";
+        readonly string DBTable_Jagwar_SFG_Summary = "Jagwar_SFG_Summary";
         readonly string DBTable_Jagwar_FG00 = "Jagwar_FG00";
         readonly string DBTable_Jagwar_FG24 = "Jagwar_FG24";
         readonly string DBTable_JagwarPlus_FCT = "JagwarPlus_FCT";
+        readonly string DBTable_JagwarPlus_FCT_Summary = "JagwarPlus_FCT_Summary";
         readonly string DBTable_JagwarPlus_SFG = "JagwarPlus_SFG";
+        readonly string DBTable_JagwarPlus_SFG_Summary = "JagwarPlus_SFG_Summary";
         readonly string DBTable_JagwarPlus_FG00 = "JagwarPlus_FG00";
         readonly string DBTable_JagwarPlus_FG24 = "JagwarPlus_FG24";
 
@@ -111,12 +115,16 @@ namespace DatabaseSetupService
             DB_Jagwar.CreateTable(DBTable_Jagwar_SFG, StationCategory.SFG);
             DB_Jagwar.CreateTable(DBTable_Jagwar_FG00, StationCategory.FG00);
             DB_Jagwar.CreateTable(DBTable_Jagwar_FG24, StationCategory.FG24);
+            DB_Jagwar.CreateFCTSummaryTable(DBTable_Jagwar_FCT_Summary);
+            DB_Jagwar.CreateSFGSummaryTable(DBTable_Jagwar_SFG_Summary);
             DB_JagwarPlus.CreateDatabase();
             DB_JagwarPlus.ConnectDatabase();
             DB_JagwarPlus.CreateTable(DBTable_JagwarPlus_FCT, StationCategory.FCT);
             DB_JagwarPlus.CreateTable(DBTable_JagwarPlus_SFG, StationCategory.SFG);
             DB_JagwarPlus.CreateTable(DBTable_JagwarPlus_FG00, StationCategory.FG00);
             DB_JagwarPlus.CreateTable(DBTable_JagwarPlus_FG24, StationCategory.FG24);
+            DB_JagwarPlus.CreateFCTSummaryTable(DBTable_JagwarPlus_FCT_Summary);
+            DB_JagwarPlus.CreateSFGSummaryTable(DBTable_JagwarPlus_SFG_Summary);
 
             timer.Start();
 
@@ -384,11 +392,15 @@ namespace DatabaseSetupService
                     bool newRecord;
                     if (project == "JAGWAR" || project == "JAGWARC")
                     {
-                        newRecord= DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FCT, StationCategory.FCT, oneFilePath);
+                        newRecord = DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FCT, StationCategory.FCT, oneFilePath);
+                        MTEDatabaseSetup.FCTHeader fctInformation = DB_Jagwar.ParseFCTHeader(fileName);
+                        DB_Jagwar.AddRowForSummary(DBTable_Jagwar_FCT_Summary, fctInformation);
                     }
                     else
                     {
-                        newRecord= DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FCT, StationCategory.FCT, oneFilePath);
+                        newRecord = DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FCT, StationCategory.FCT, oneFilePath);
+                        MTEDatabaseSetup.FCTHeader fctInformation = DB_JagwarPlus.ParseFCTHeader(fileName);
+                        DB_JagwarPlus.AddRowForSummary(DBTable_JagwarPlus_FCT_Summary, fctInformation);
                     }
                     if (newRecord)
                     {
@@ -428,10 +440,14 @@ namespace DatabaseSetupService
                     if (project == "JAGWAR" || project == "JAGWARC")
                     {
                         newRecord=DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_SFG, StationCategory.SFG, oneFilePath);
+                        MTEDatabaseSetup.SFGHeader sfgInformation = DB_Jagwar.ParseSFGHeader(fileName);
+                        DB_Jagwar.AddRowForSummary(DBTable_Jagwar_SFG_Summary, sfgInformation);
                     }
                     else
                     {
                         newRecord=DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_SFG, StationCategory.SFG, oneFilePath);
+                        MTEDatabaseSetup.SFGHeader sfgInformation = DB_JagwarPlus.ParseSFGHeader(fileName);
+                        DB_JagwarPlus.AddRowForSummary(DBTable_JagwarPlus_SFG_Summary, sfgInformation);
                     }
                     if (newRecord)
                         count++;

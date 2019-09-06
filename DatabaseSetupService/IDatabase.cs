@@ -15,7 +15,7 @@ namespace JUUL.Manufacture.Database
 
         void CreateTable(string tableName, StationCategory sc);
 
-        void AddRow(string tableName, StationCategory sc);
+        void AddRowForMeasurements(string tableName, StationCategory sc);
 
         bool CheckRecordExists(string tableName, string sn, string datetime);
 
