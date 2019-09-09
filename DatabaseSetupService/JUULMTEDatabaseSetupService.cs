@@ -332,10 +332,10 @@ namespace DatabaseSetupService
                 }
                 Task.WaitAll(tasks);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Log($"Error happens. {ex.Message}");
-                EventLogWriter($"Error happens. {ex.Message}", EventCategory.ServiceTimerFault);
+                Log($"Error happens. {ex.Message + ex.StackTrace}");
+                EventLogWriter($"Error happens. {ex.Message + ex.StackTrace}", EventCategory.ServiceTimerFault);
             }
             timer.Start();
         }

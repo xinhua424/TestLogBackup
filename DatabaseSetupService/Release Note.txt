@@ -1,4 +1,7 @@
-﻿Version 1.0.1.0
+﻿Version 1.1.0.0
+Add the summary table for FCT and SFG station, the summary table contains the final judgement of 2 out of 3 sets rule.
+
+Version 1.0.1.0
 Run the async log parsing tasks for each station.
 
 Version 1.0.0.0

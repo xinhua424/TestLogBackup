@@ -240,13 +240,13 @@ namespace JUUL.Manufacture.Database
         public void AddRowForMeasurements(string tableName, StationCategory sc)
         {
             string variableNames = "";
-            string values="";
+            string values = "";
             int count = 0;
             switch (sc)
             {
                 case StationCategory.FCT:
                     count = 0;
-                    foreach(var item in fctMeasurementValues)
+                    foreach (var item in fctMeasurementValues)
                     {
                         variableNames += item.Key;
                         values += item.Value;
@@ -299,10 +299,16 @@ namespace JUUL.Manufacture.Database
                 default:
                     break;
             }
-
-            string sql = $"insert into {tableName} ({variableNames}) values ({values})";
-            SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
-            command.ExecuteNonQuery();
+            try
+            {
+                string sql = $"insert into {tableName} ({variableNames}) values ({values})";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                command.ExecuteNonQuery();
+            }
+            catch
+            {
+                throw;
+            }
         }
 
         public void AddRowForSummary(string summaryTableName, FCTHeader FCTHeaderToBeAdded)
@@ -310,52 +316,59 @@ namespace JUUL.Manufacture.Database
             if (dbConnected)
             {
                 DateTime dtInSummary, dtToBeAdded;
-                string sql = $"select uut_sn from {summaryTableName} where uut_sn={FCTHeaderToBeAdded.uut_sn}";
-                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
-                SQLiteDataReader reader = command.ExecuteReader();
-                if (reader.HasRows)
+                try
                 {
-                    //The SN exists in the summary table.
-                    FCTHeader FCTHeaderInSummary = new FCTHeader();
-                    FCTHeaderInSummary.uut_sn = (string)reader["uut_sn"];
-                    FCTHeaderInSummary.total_test_result = (string)reader["total_test_result"];
-                    FCTHeaderInSummary.fail_code = (string)reader["fail_code"];
-                    FCTHeaderInSummary.start_time = (string)reader["start_time"];
-                    FCTHeaderInSummary.tester_id = (string)reader["tester_id"];
-                    FCTHeaderInSummary.slot_id = (string)reader["slot_id"];
-                    FCTHeaderInSummary.position_id = (string)reader["position_id"];
-                    dtInSummary = DateTime.ParseExact(FCTHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                    dtToBeAdded = DateTime.ParseExact(FCTHeaderToBeAdded.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                    if (FCTHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                    string sql = $"select uut_sn from {summaryTableName} where uut_sn='{FCTHeaderToBeAdded.uut_sn}'";
+                    SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    if (reader.HasRows)
                     {
-                        if ((FCTHeaderInSummary.total_test_result.ToUpper() == "FAIL" && dtToBeAdded > dtInSummary) || FCTHeaderInSummary.total_test_result.ToUpper() == "PASS")
+                        //The SN exists in the summary table.
+                        FCTHeader FCTHeaderInSummary = new FCTHeader();
+                        FCTHeaderInSummary.uut_sn = (string)reader["uut_sn"];
+                        FCTHeaderInSummary.total_test_result = (string)reader["total_test_result"];
+                        FCTHeaderInSummary.fail_code = (string)reader["fail_code"];
+                        FCTHeaderInSummary.start_time = (string)reader["start_time"];
+                        FCTHeaderInSummary.tester_id = (string)reader["tester_id"];
+                        FCTHeaderInSummary.slot_id = (string)reader["slot_id"];
+                        FCTHeaderInSummary.position_id = (string)reader["position_id"];
+                        dtInSummary = DateTime.ParseExact(FCTHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                        dtToBeAdded = DateTime.ParseExact(FCTHeaderToBeAdded.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                        if (FCTHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
                         {
-                            //Update the records to the fct summary table.
-                            sql = $"UPDATE {summaryTableName} SET " +
-                                $"total_test_result='{FCTHeaderToBeAdded.total_test_result}' " +
-                                $"fail_code='{FCTHeaderToBeAdded.fail_code}' " +
-                                $"start_time='{FCTHeaderToBeAdded.start_time}' " +
-                                $"tester_id='{FCTHeaderToBeAdded.tester_id}' " +
-                                $"slot_id='{FCTHeaderToBeAdded.slot_id}' " +
-                                $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderInSummary.uut_sn}'";
-                            command = new SQLiteCommand(sql, databaseConnection);
-                            command.ExecuteNonQuery();
+                            if ((FCTHeaderInSummary.total_test_result.ToUpper() == "FAIL" && dtToBeAdded > dtInSummary) || FCTHeaderInSummary.total_test_result.ToUpper() == "PASS")
+                            {
+                                //Update the records to the fct summary table.
+                                sql = $"UPDATE {summaryTableName} SET " +
+                                    $"total_test_result='{FCTHeaderToBeAdded.total_test_result}' " +
+                                    $"fail_code='{FCTHeaderToBeAdded.fail_code}' " +
+                                    $"start_time='{FCTHeaderToBeAdded.start_time}' " +
+                                    $"tester_id='{FCTHeaderToBeAdded.tester_id}' " +
+                                    $"slot_id='{FCTHeaderToBeAdded.slot_id}' " +
+                                    $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderInSummary.uut_sn}'";
+                                command = new SQLiteCommand(sql, databaseConnection);
+                                command.ExecuteNonQuery();
+                            }
                         }
                     }
+                    else
+                    {
+                        //The SN doesn't exist in the summary table.
+                        sql = $"INSERT INTO {summaryTableName} (total_test_result,fail_code,start_time,tester_id,slot_id,position_id) values " +
+                            $"('{FCTHeaderToBeAdded.total_test_result}'," +
+                            $"'{FCTHeaderToBeAdded.fail_code}'," +
+                            $"'{FCTHeaderToBeAdded.start_time}'," +
+                            $"'{FCTHeaderToBeAdded.tester_id}'," +
+                            $"'{FCTHeaderToBeAdded.slot_id}'," +
+                            $"'{FCTHeaderToBeAdded.position_id}') " +
+                            $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderToBeAdded.uut_sn}'";
+                        command = new SQLiteCommand(sql, databaseConnection);
+                        command.ExecuteNonQuery();
+                    }
                 }
-                else
+                catch
                 {
-                    //The SN doesn't exist in the summary table.
-                    sql = $"INSERT INTO {summaryTableName} (total_test_result,fail_code,start_time,tester_id,slot_id,position_id) values " +
-                        $"('{FCTHeaderToBeAdded.total_test_result}'," +
-                        $"'{FCTHeaderToBeAdded.fail_code}'," +
-                        $"'{FCTHeaderToBeAdded.start_time}'," +
-                        $"'{FCTHeaderToBeAdded.tester_id}'," +
-                        $"'{FCTHeaderToBeAdded.slot_id}'," +
-                        $"'{FCTHeaderToBeAdded.position_id}') " +
-                        $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderToBeAdded.uut_sn}'";
-                    command = new SQLiteCommand(sql, databaseConnection);
-                    command.ExecuteNonQuery();
+                    throw;
                 }
             }
         }
@@ -365,49 +378,56 @@ namespace JUUL.Manufacture.Database
             if (dbConnected)
             {
                 DateTime dtInSummary, dtToBeAdded;
-                string sql = $"select uut_sn from {summaryTableName} where uut_sn={SFGHeaderToBeAdded.uut_sn}";
-                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
-                SQLiteDataReader reader = command.ExecuteReader();
-                if (reader.HasRows)
+                try
                 {
-                    //The SN exists in the summary table.
-                    SFGHeader SFGHeaderInSummary = new SFGHeader();
-                    SFGHeaderInSummary.uut_sn = (string)reader["uut_sn"];
-                    SFGHeaderInSummary.total_test_result = (string)reader["total_test_result"];
-                    SFGHeaderInSummary.fail_code = (string)reader["fail_code"];
-                    SFGHeaderInSummary.start_time = (string)reader["start_time"];
-                    SFGHeaderInSummary.tester_id = (string)reader["tester_id"];
-                    SFGHeaderInSummary.position_id = (string)reader["position_id"];
-                    dtInSummary = DateTime.ParseExact(SFGHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                    dtToBeAdded = DateTime.ParseExact(SFGHeaderToBeAdded.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                    if (SFGHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                    string sql = $"select uut_sn from {summaryTableName} where uut_sn='{SFGHeaderToBeAdded.uut_sn}'";
+                    SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    if (reader.HasRows)
                     {
-                        if ((SFGHeaderInSummary.total_test_result.ToUpper() == "FAIL" && dtToBeAdded > dtInSummary) || SFGHeaderInSummary.total_test_result.ToUpper() == "PASS")
+                        //The SN exists in the summary table.
+                        SFGHeader SFGHeaderInSummary = new SFGHeader();
+                        SFGHeaderInSummary.uut_sn = (string)reader["uut_sn"];
+                        SFGHeaderInSummary.total_test_result = (string)reader["total_test_result"];
+                        SFGHeaderInSummary.fail_code = (string)reader["fail_code"];
+                        SFGHeaderInSummary.start_time = (string)reader["start_time"];
+                        SFGHeaderInSummary.tester_id = (string)reader["tester_id"];
+                        SFGHeaderInSummary.position_id = (string)reader["position_id"];
+                        dtInSummary = DateTime.ParseExact(SFGHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                        dtToBeAdded = DateTime.ParseExact(SFGHeaderToBeAdded.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                        if (SFGHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
                         {
-                            //Update the records to the SFG summary table.
-                            sql = $"UPDATE {summaryTableName} SET " +
-                                $"total_test_result='{SFGHeaderToBeAdded.total_test_result}' " +
-                                $"fail_code='{SFGHeaderToBeAdded.fail_code}' " +
-                                $"start_time='{SFGHeaderToBeAdded.start_time}' " +
-                                $"tester_id='{SFGHeaderToBeAdded.tester_id}' " +
-                                $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderInSummary.uut_sn}'";
-                            command = new SQLiteCommand(sql, databaseConnection);
-                            command.ExecuteNonQuery();
+                            if ((SFGHeaderInSummary.total_test_result.ToUpper() == "FAIL" && dtToBeAdded > dtInSummary) || SFGHeaderInSummary.total_test_result.ToUpper() == "PASS")
+                            {
+                                //Update the records to the SFG summary table.
+                                sql = $"UPDATE {summaryTableName} SET " +
+                                    $"total_test_result='{SFGHeaderToBeAdded.total_test_result}' " +
+                                    $"fail_code='{SFGHeaderToBeAdded.fail_code}' " +
+                                    $"start_time='{SFGHeaderToBeAdded.start_time}' " +
+                                    $"tester_id='{SFGHeaderToBeAdded.tester_id}' " +
+                                    $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderInSummary.uut_sn}'";
+                                command = new SQLiteCommand(sql, databaseConnection);
+                                command.ExecuteNonQuery();
+                            }
                         }
                     }
+                    else
+                    {
+                        //The SN doesn't exist in the summary table.
+                        sql = $"INSERT INTO {summaryTableName} (total_test_result,fail_code,start_time,tester_id,slot_id,position_id) values " +
+                            $"('{SFGHeaderToBeAdded.total_test_result}'," +
+                            $"'{SFGHeaderToBeAdded.fail_code}'," +
+                            $"'{SFGHeaderToBeAdded.start_time}'," +
+                            $"'{SFGHeaderToBeAdded.tester_id}'," +
+                            $"'{SFGHeaderToBeAdded.position_id}') " +
+                            $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderToBeAdded.uut_sn}'";
+                        command = new SQLiteCommand(sql, databaseConnection);
+                        command.ExecuteNonQuery();
+                    }
                 }
-                else
+                catch
                 {
-                    //The SN doesn't exist in the summary table.
-                    sql = $"INSERT INTO {summaryTableName} (total_test_result,fail_code,start_time,tester_id,slot_id,position_id) values " +
-                        $"('{SFGHeaderToBeAdded.total_test_result}'," +
-                        $"'{SFGHeaderToBeAdded.fail_code}'," +
-                        $"'{SFGHeaderToBeAdded.start_time}'," +
-                        $"'{SFGHeaderToBeAdded.tester_id}'," +
-                        $"'{SFGHeaderToBeAdded.position_id}') " +
-                        $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderToBeAdded.uut_sn}'";
-                    command = new SQLiteCommand(sql, databaseConnection);
-                    command.ExecuteNonQuery();
+                    throw;
                 }
             }
         }
@@ -417,127 +437,134 @@ namespace JUUL.Manufacture.Database
             bool inserted = false;
             if (logFullPath != "")
             {
-                string[] lines = File.ReadAllLines(logFullPath);
-                switch (sc)
+                try
                 {
-                    case StationCategory.FCT:
-                        fctMeasurementValues.Clear();
-                        foreach (string oneline in lines)
-                        {
-                            string[] elements = oneline.Split(',');
-                            string measurementName = elements[0];
-                            string value = elements[2];
-                            if (fctMeasuremenNames.ContainsKey(measurementName))
+                    string[] lines = File.ReadAllLines(logFullPath);
+                    switch (sc)
+                    {
+                        case StationCategory.FCT:
+                            fctMeasurementValues.Clear();
+                            foreach (string oneline in lines)
                             {
-                                if (fctMeasuremenNames[measurementName].Contains("varchar"))
+                                string[] elements = oneline.Split(',');
+                                string measurementName = elements[0];
+                                string value = elements[2];
+                                if (fctMeasuremenNames.ContainsKey(measurementName))
                                 {
-                                    value = "'" + value + "'";
-                                }
-                                else
-                                {
-                                    if (fctMeasuremenNames[measurementName] == "date")
+                                    if (fctMeasuremenNames[measurementName].Contains("varchar"))
                                     {
-                                        value = "'" + ConvertDateTimeFormat(value) + "'";
+                                        value = "'" + value + "'";
                                     }
+                                    else
+                                    {
+                                        if (fctMeasuremenNames[measurementName] == "date")
+                                        {
+                                            value = "'" + ConvertDateTimeFormat(value) + "'";
+                                        }
+                                    }
+                                    fctMeasurementValues.Add("'" + measurementName + "'", value);
                                 }
-                                fctMeasurementValues.Add("'" + measurementName + "'", value);
                             }
-                        }
-                        if (!CheckRecordExists(tableName, (string)fctMeasurementValues["'uut_sn'"], (string)fctMeasurementValues["'start_time'"]))
-                        {
-                            this.AddRowForMeasurements(tableName, sc);
-                            inserted = true;
-                        }
-                        break;
-                    case StationCategory.SFG:
-                        sfgMeasurementValues.Clear();
-                        foreach (string oneline in lines)
-                        {
-                            string[] elements = oneline.Split(',');
-                            string measurementName = elements[0];
-                            string value = elements[2];
-                            if (sfgMeasuremenNames.ContainsKey(measurementName))
+                            if (!CheckRecordExists(tableName, (string)fctMeasurementValues["'uut_sn'"], (string)fctMeasurementValues["'start_time'"]))
                             {
-                                if (sfgMeasuremenNames[measurementName].Contains("varchar"))
-                                {
-                                    value = "'" + value + "'";
-                                }
-                                else
-                                {
-                                    if (sfgMeasuremenNames[measurementName] == "date")
-                                    {
-                                        value = "'" + ConvertDateTimeFormat(value) + "'";
-                                    }
-                                }
-                                sfgMeasurementValues.Add("'" + measurementName + "'", value);
+                                this.AddRowForMeasurements(tableName, sc);
+                                inserted = true;
                             }
-                        }
-                        if (!CheckRecordExists(tableName, (string)(sfgMeasurementValues["'uut_sn'"]), (string)(sfgMeasurementValues["'start_time'"])))
-                        {
-                            this.AddRowForMeasurements(tableName, sc);
-                            inserted = true;
-                        }
-                        break;
-                    case StationCategory.FG00:
-                        fg00MeasurementValues.Clear();
-                        foreach (string oneline in lines)
-                        {
-                            string[] elements = oneline.Split(',');
-                            string measurementName = elements[0];
-                            string value = elements[2];
-                            if (fg00MeasuremenNames.ContainsKey(measurementName))
+                            break;
+                        case StationCategory.SFG:
+                            sfgMeasurementValues.Clear();
+                            foreach (string oneline in lines)
                             {
-                                if (fg00MeasuremenNames[measurementName].Contains("varchar"))
+                                string[] elements = oneline.Split(',');
+                                string measurementName = elements[0];
+                                string value = elements[2];
+                                if (sfgMeasuremenNames.ContainsKey(measurementName))
                                 {
-                                    value = "'" + value + "'";
-                                }
-                                else
-                                {
-                                    if (fg00MeasuremenNames[measurementName] == "date")
+                                    if (sfgMeasuremenNames[measurementName].Contains("varchar"))
                                     {
-                                        value = "'" + ConvertDateTimeFormat(value) + "'";
+                                        value = "'" + value + "'";
                                     }
+                                    else
+                                    {
+                                        if (sfgMeasuremenNames[measurementName] == "date")
+                                        {
+                                            value = "'" + ConvertDateTimeFormat(value) + "'";
+                                        }
+                                    }
+                                    sfgMeasurementValues.Add("'" + measurementName + "'", value);
                                 }
-                                fg00MeasurementValues.Add("'" + measurementName + "'", value);
                             }
-                        }
-                        if (!CheckRecordExists(tableName, (string)(fg00MeasurementValues["'uut_sn'"]), (string)(fg00MeasurementValues["'start_time'"])))
-                        {
-                            this.AddRowForMeasurements(tableName, sc);
-                            inserted = true;
-                        }
-                        break;
-                    case StationCategory.FG24:
-                        fg24MeasurementValues.Clear();
-                        foreach (string oneline in lines)
-                        {
-                            string[] elements = oneline.Split(',');
-                            string measurementName = elements[0];
-                            string value = elements[2];
-                            if (fg24MeasuremenNames.ContainsKey(measurementName))
+                            if (!CheckRecordExists(tableName, (string)(sfgMeasurementValues["'uut_sn'"]), (string)(sfgMeasurementValues["'start_time'"])))
                             {
-                                if (fg24MeasuremenNames[measurementName].Contains("varchar"))
-                                {
-                                    value = "'" + value + "'";
-                                }
-                                else
-                                {
-                                    if (fg24MeasuremenNames[measurementName] == "date")
-                                    {
-                                        value = "'" + ConvertDateTimeFormat(value) + "'";
-                                    }
-                                }
-                                fg24MeasurementValues.Add("'" + measurementName + "'", value);
+                                this.AddRowForMeasurements(tableName, sc);
+                                inserted = true;
                             }
-                        }
-                        if (!CheckRecordExists(tableName, (string)(fg24MeasurementValues["'uut_sn'"]), (string)(fg24MeasurementValues["'start_time'"])))
-                        {
-                            this.AddRowForMeasurements(tableName, sc);
-                            inserted = true;
-                        }
-                        break;
-                    default:
-                        throw new Exception($"Invalid station category: {sc}");
+                            break;
+                        case StationCategory.FG00:
+                            fg00MeasurementValues.Clear();
+                            foreach (string oneline in lines)
+                            {
+                                string[] elements = oneline.Split(',');
+                                string measurementName = elements[0];
+                                string value = elements[2];
+                                if (fg00MeasuremenNames.ContainsKey(measurementName))
+                                {
+                                    if (fg00MeasuremenNames[measurementName].Contains("varchar"))
+                                    {
+                                        value = "'" + value + "'";
+                                    }
+                                    else
+                                    {
+                                        if (fg00MeasuremenNames[measurementName] == "date")
+                                        {
+                                            value = "'" + ConvertDateTimeFormat(value) + "'";
+                                        }
+                                    }
+                                    fg00MeasurementValues.Add("'" + measurementName + "'", value);
+                                }
+                            }
+                            if (!CheckRecordExists(tableName, (string)(fg00MeasurementValues["'uut_sn'"]), (string)(fg00MeasurementValues["'start_time'"])))
+                            {
+                                this.AddRowForMeasurements(tableName, sc);
+                                inserted = true;
+                            }
+                            break;
+                        case StationCategory.FG24:
+                            fg24MeasurementValues.Clear();
+                            foreach (string oneline in lines)
+                            {
+                                string[] elements = oneline.Split(',');
+                                string measurementName = elements[0];
+                                string value = elements[2];
+                                if (fg24MeasuremenNames.ContainsKey(measurementName))
+                                {
+                                    if (fg24MeasuremenNames[measurementName].Contains("varchar"))
+                                    {
+                                        value = "'" + value + "'";
+                                    }
+                                    else
+                                    {
+                                        if (fg24MeasuremenNames[measurementName] == "date")
+                                        {
+                                            value = "'" + ConvertDateTimeFormat(value) + "'";
+                                        }
+                                    }
+                                    fg24MeasurementValues.Add("'" + measurementName + "'", value);
+                                }
+                            }
+                            if (!CheckRecordExists(tableName, (string)(fg24MeasurementValues["'uut_sn'"]), (string)(fg24MeasurementValues["'start_time'"])))
+                            {
+                                this.AddRowForMeasurements(tableName, sc);
+                                inserted = true;
+                            }
+                            break;
+                        default:
+                            throw new Exception($"Invalid station category: {sc}");
+                    }
+                }
+                catch
+                {
+                    throw;
                 }
             }
             return inserted;
@@ -553,15 +580,23 @@ namespace JUUL.Manufacture.Database
             string[] elemInFileName = fctFileName.Split('_');
             FCTHeader fctHeaderToBeAdded = new FCTHeader();
             fctHeaderToBeAdded.uut_sn = elemInFileName[0];
-            if (elemInFileName[1].Contains("FAIL"))
+            string result = elemInFileName[1];
+            if (result.Contains("FAIL"))
             {
-                string[] finalResults = elemInFileName[1].Split(new char[] { '[', ']' });
+                string[] finalResults = result.Split(new char[] { '[', ']' });
                 fctHeaderToBeAdded.total_test_result = finalResults[0];
                 fctHeaderToBeAdded.fail_code = finalResults[1];
             }
             else
             {
-                fctHeaderToBeAdded.total_test_result = elemInFileName[1];
+                if (result == "PASS")
+                {
+                    fctHeaderToBeAdded.total_test_result = result;
+                }
+                else
+                {
+                    throw new Exception($"Invalid FCT log file name, no \"PASS\" or \"FAIL\" in the file name {fctFileName}.");
+                }
             }
             fctHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
             fctHeaderToBeAdded.tester_id = elemInFileName[5];
@@ -580,15 +615,23 @@ namespace JUUL.Manufacture.Database
             string[] elemInFileName = sfgFileName.Split('_');
             SFGHeader sfgHeaderToBeAdded = new SFGHeader();
             sfgHeaderToBeAdded.uut_sn = elemInFileName[0];
-            if (elemInFileName[2].Contains("FAIL"))
+            string result = elemInFileName[2];
+            if (result.Contains("FAIL"))
             {
-                string[] finalResults = elemInFileName[2].Split(new char[] { '[', ']' });
+                string[] finalResults = result.Split(new char[] { '[', ']' });
                 sfgHeaderToBeAdded.total_test_result = finalResults[0];
                 sfgHeaderToBeAdded.fail_code = finalResults[1];
             }
             else
             {
-                sfgHeaderToBeAdded.total_test_result = elemInFileName[2];
+                if (result == "PASS")
+                {
+                    sfgHeaderToBeAdded.total_test_result = result;
+                }
+                else
+                {
+                    throw new Exception($"Invalid SFG log file name, no \"PASS\" or \"FAIL\" in the file name {sfgFileName}.");
+                }
             }
             sfgHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
             sfgHeaderToBeAdded.tester_id = elemInFileName[6];
@@ -618,10 +661,17 @@ namespace JUUL.Manufacture.Database
         {
             if(dbConnected)
             {
-                string sql = $"select uut_sn from {tableName} where uut_sn={serialNumber} and start_time={datetime}";
-                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
-                SQLiteDataReader reader = command.ExecuteReader();
-                return reader.HasRows;
+                try
+                {
+                    string sql = $"select uut_sn from {tableName} where uut_sn={serialNumber} and start_time={datetime}";
+                    SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    return reader.HasRows;
+                }
+                catch
+                {
+                    throw;
+                }
             }
             return true;
         }
@@ -630,10 +680,17 @@ namespace JUUL.Manufacture.Database
         {
             if (dbConnected)
             {
-                string sql = $"select uut_sn from {tableName} where uut_sn={serialNumber}";
-                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
-                SQLiteDataReader reader = command.ExecuteReader();
-                return reader.HasRows;
+                try
+                {
+                    string sql = $"select uut_sn from {tableName} where uut_sn={serialNumber}";
+                    SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    return reader.HasRows;
+                }
+                catch
+                {
+                    throw;
+                }
             }
             return true;
 
