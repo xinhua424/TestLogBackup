@@ -138,7 +138,6 @@ namespace JUUL.Manufacture.Database
             sfgSummaryNames.Add("fail_code", "varchar(10)");
             sfgSummaryNames.Add("start_time", "date");
             sfgSummaryNames.Add("tester_id", "varchar(10)");
-            sfgSummaryNames.Add("slot_id", "varchar(1)");
             sfgSummaryNames.Add("position_id", "varchar(1)");
         }
 
@@ -316,19 +315,19 @@ namespace JUUL.Manufacture.Database
             if (dbConnected)
             {
                 DateTime dtInSummary, dtToBeAdded;
-                try
+                string sql = $"select * from {summaryTableName} where uut_sn='{FCTHeaderToBeAdded.uut_sn}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    string sql = $"select uut_sn from {summaryTableName} where uut_sn='{FCTHeaderToBeAdded.uut_sn}'";
-                    SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
-                    SQLiteDataReader reader = command.ExecuteReader();
-                    if (reader.HasRows)
+                    //The SN exists in the summary table.
+                    try
                     {
-                        //The SN exists in the summary table.
                         FCTHeader FCTHeaderInSummary = new FCTHeader();
                         FCTHeaderInSummary.uut_sn = (string)reader["uut_sn"];
                         FCTHeaderInSummary.total_test_result = (string)reader["total_test_result"];
                         FCTHeaderInSummary.fail_code = (string)reader["fail_code"];
-                        FCTHeaderInSummary.start_time = (string)reader["start_time"];
+                        FCTHeaderInSummary.start_time = ((DateTime)reader["start_time"]).ToString("yyyy-MM-dd HH:mm:ss.fff");
                         FCTHeaderInSummary.tester_id = (string)reader["tester_id"];
                         FCTHeaderInSummary.slot_id = (string)reader["slot_id"];
                         FCTHeaderInSummary.position_id = (string)reader["position_id"];
@@ -340,35 +339,42 @@ namespace JUUL.Manufacture.Database
                             {
                                 //Update the records to the fct summary table.
                                 sql = $"UPDATE {summaryTableName} SET " +
-                                    $"total_test_result='{FCTHeaderToBeAdded.total_test_result}' " +
-                                    $"fail_code='{FCTHeaderToBeAdded.fail_code}' " +
-                                    $"start_time='{FCTHeaderToBeAdded.start_time}' " +
-                                    $"tester_id='{FCTHeaderToBeAdded.tester_id}' " +
-                                    $"slot_id='{FCTHeaderToBeAdded.slot_id}' " +
+                                    $"total_test_result='{FCTHeaderToBeAdded.total_test_result}', " +
+                                    $"fail_code='{FCTHeaderToBeAdded.fail_code}', " +
+                                    $"start_time='{FCTHeaderToBeAdded.start_time}', " +
+                                    $"tester_id='{FCTHeaderToBeAdded.tester_id}', " +
+                                    $"slot_id='{FCTHeaderToBeAdded.slot_id}', " +
                                     $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderInSummary.uut_sn}'";
                                 command = new SQLiteCommand(sql, databaseConnection);
                                 command.ExecuteNonQuery();
                             }
                         }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        //The SN doesn't exist in the summary table.
-                        sql = $"INSERT INTO {summaryTableName} (total_test_result,fail_code,start_time,tester_id,slot_id,position_id) values " +
-                            $"('{FCTHeaderToBeAdded.total_test_result}'," +
+                        throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
+                    }
+                }
+                else
+                {
+                    //The SN doesn't exist in the summary table.
+                    try
+                    {
+                        sql = $"INSERT INTO {summaryTableName} (uut_sn,total_test_result,fail_code,start_time,tester_id,slot_id,position_id) VALUES " +
+                            $"('{FCTHeaderToBeAdded.uut_sn}'," +
+                            $"'{FCTHeaderToBeAdded.total_test_result}'," +
                             $"'{FCTHeaderToBeAdded.fail_code}'," +
                             $"'{FCTHeaderToBeAdded.start_time}'," +
                             $"'{FCTHeaderToBeAdded.tester_id}'," +
                             $"'{FCTHeaderToBeAdded.slot_id}'," +
-                            $"'{FCTHeaderToBeAdded.position_id}') " +
-                            $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderToBeAdded.uut_sn}'";
+                            $"'{FCTHeaderToBeAdded.position_id}')";
                         command = new SQLiteCommand(sql, databaseConnection);
                         command.ExecuteNonQuery();
                     }
-                }
-                catch
-                {
-                    throw;
+                    catch (Exception ex)
+                    {
+                        throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
+                    }
                 }
             }
         }
@@ -378,19 +384,19 @@ namespace JUUL.Manufacture.Database
             if (dbConnected)
             {
                 DateTime dtInSummary, dtToBeAdded;
-                try
+                string sql = $"select * from {summaryTableName} where uut_sn='{SFGHeaderToBeAdded.uut_sn}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    string sql = $"select uut_sn from {summaryTableName} where uut_sn='{SFGHeaderToBeAdded.uut_sn}'";
-                    SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
-                    SQLiteDataReader reader = command.ExecuteReader();
-                    if (reader.HasRows)
+                    //The SN exists in the summary table.
+                    try
                     {
-                        //The SN exists in the summary table.
                         SFGHeader SFGHeaderInSummary = new SFGHeader();
                         SFGHeaderInSummary.uut_sn = (string)reader["uut_sn"];
                         SFGHeaderInSummary.total_test_result = (string)reader["total_test_result"];
                         SFGHeaderInSummary.fail_code = (string)reader["fail_code"];
-                        SFGHeaderInSummary.start_time = (string)reader["start_time"];
+                        SFGHeaderInSummary.start_time = ((DateTime)reader["start_time"]).ToString("yyyy-MM-dd HH:mm:ss.fff");
                         SFGHeaderInSummary.tester_id = (string)reader["tester_id"];
                         SFGHeaderInSummary.position_id = (string)reader["position_id"];
                         dtInSummary = DateTime.ParseExact(SFGHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
@@ -401,33 +407,40 @@ namespace JUUL.Manufacture.Database
                             {
                                 //Update the records to the SFG summary table.
                                 sql = $"UPDATE {summaryTableName} SET " +
-                                    $"total_test_result='{SFGHeaderToBeAdded.total_test_result}' " +
-                                    $"fail_code='{SFGHeaderToBeAdded.fail_code}' " +
-                                    $"start_time='{SFGHeaderToBeAdded.start_time}' " +
-                                    $"tester_id='{SFGHeaderToBeAdded.tester_id}' " +
+                                    $"total_test_result='{SFGHeaderToBeAdded.total_test_result}', " +
+                                    $"fail_code='{SFGHeaderToBeAdded.fail_code}', " +
+                                    $"start_time='{SFGHeaderToBeAdded.start_time}', " +
+                                    $"tester_id='{SFGHeaderToBeAdded.tester_id}', " +
                                     $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderInSummary.uut_sn}'";
                                 command = new SQLiteCommand(sql, databaseConnection);
                                 command.ExecuteNonQuery();
                             }
                         }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        //The SN doesn't exist in the summary table.
-                        sql = $"INSERT INTO {summaryTableName} (total_test_result,fail_code,start_time,tester_id,slot_id,position_id) values " +
-                            $"('{SFGHeaderToBeAdded.total_test_result}'," +
+                        throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
+                    }
+                }
+                else
+                {
+                    //The SN doesn't exist in the summary table.
+                    try
+                    {
+                        sql = $"INSERT INTO {summaryTableName} (uut_sn,total_test_result,fail_code,start_time,tester_id,position_id) VALUES " +
+                            $"('{SFGHeaderToBeAdded.uut_sn}'," +
+                            $"'{SFGHeaderToBeAdded.total_test_result}'," +
                             $"'{SFGHeaderToBeAdded.fail_code}'," +
                             $"'{SFGHeaderToBeAdded.start_time}'," +
                             $"'{SFGHeaderToBeAdded.tester_id}'," +
-                            $"'{SFGHeaderToBeAdded.position_id}') " +
-                            $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderToBeAdded.uut_sn}'";
+                            $"'{SFGHeaderToBeAdded.position_id}')";
                         command = new SQLiteCommand(sql, databaseConnection);
                         command.ExecuteNonQuery();
                     }
-                }
-                catch
-                {
-                    throw;
+                    catch (Exception ex)
+                    {
+                        throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
+                    }
                 }
             }
         }
