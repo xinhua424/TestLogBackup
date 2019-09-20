@@ -236,9 +236,17 @@ namespace TestLogBackup_RT_Service
                                 if (onefile.ToUpper().Contains("PASS"))
                                 {
                                     sourceFileName_FullPath = Path.Combine(logRootFolder, date, "Log", "Pass", onefile);
-                                    if(!File.Exists(sourceFileName_FullPath))
+                                    if (!File.Exists(sourceFileName_FullPath))
                                     {
-                                        sourceFileName_FullPath = Path.Combine(logRootFolder, date, "Log", "Pass", "Processed", onefile);
+                                        sourceFileName_FullPath = Path.Combine(logRootFolder, date, "Log", "Pass", "Backup", onefile);
+                                        if (!File.Exists(sourceFileName_FullPath))
+                                        {
+                                            sourceFileName_FullPath = Path.Combine(logRootFolder, date, "Log", "Pass", "Processed", onefile);
+                                            if (!File.Exists(sourceFileName_FullPath))
+                                            {
+                                                sourceFileName_FullPath = Path.Combine(logRootFolder, date, "Log", "Pass", "Backup", "Processed", onefile);
+                                            }
+                                        }
                                     }
                                 }
                                 else
@@ -246,7 +254,15 @@ namespace TestLogBackup_RT_Service
                                     sourceFileName_FullPath = Path.Combine(logRootFolder, date, "Log", "Fail", onefile);
                                     if(!File.Exists(sourceFileName_FullPath))
                                     {
-                                        sourceFileName_FullPath=Path.Combine(logRootFolder, date, "Log", "Fail", "Processed", onefile);
+                                        sourceFileName_FullPath=Path.Combine(logRootFolder, date, "Log", "Fail", "Backup", onefile);
+                                        if (!File.Exists(sourceFileName_FullPath))
+                                        {
+                                            sourceFileName_FullPath = Path.Combine(logRootFolder, date, "Log", "Fail", "Processed", onefile);
+                                            if (!File.Exists(sourceFileName_FullPath))
+                                            {
+                                                sourceFileName_FullPath = Path.Combine(logRootFolder, date, "Log", "Fail", "Backup", "Processed", onefile);
+                                            }
+                                        }
                                     }
                                 }
                                 if(!File.Exists(sourceFileName_FullPath))

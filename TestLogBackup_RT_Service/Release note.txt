@@ -1,4 +1,7 @@
-﻿1.0.5.0
+﻿1.0.6.1
+	Add the alternative log path, e.g. log\Pass\Backup.
+
+1.0.5.0
 	Remove project name from the path in server.
 
 1.0.4.0
@@ -15,4 +18,4 @@
 	Add the machine name in the service log name.
 
 < 1.0.1.1: 
-	Initial version
+	Initialized version

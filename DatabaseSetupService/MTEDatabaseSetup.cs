@@ -98,7 +98,7 @@ namespace JUUL.Manufacture.Database
         private void SetFCTSummary()
         {
             fctSummaryNames.Add("uut_sn", "varchar(20)");
-            fctSummaryNames.Add("total_test_result", "varchar(5)");
+            fctSummaryNames.Add("total_test_result", "varchar(10)");
             fctSummaryNames.Add("fail_code", "varchar(10)");
             fctSummaryNames.Add("start_time", "date");
             fctSummaryNames.Add("tester_id", "varchar(10)");
@@ -134,7 +134,7 @@ namespace JUUL.Manufacture.Database
         private void SetSFGSummary()
         {
             sfgSummaryNames.Add("uut_sn", "varchar(20)");
-            sfgSummaryNames.Add("total_test_result", "varchar(5)");
+            sfgSummaryNames.Add("total_test_result", "varchar(10)");
             sfgSummaryNames.Add("fail_code", "varchar(10)");
             sfgSummaryNames.Add("start_time", "date");
             sfgSummaryNames.Add("tester_id", "varchar(10)");
@@ -310,7 +310,7 @@ namespace JUUL.Manufacture.Database
             }
         }
 
-        public void AddRowForSummary(string summaryTableName, FCTHeader FCTHeaderToBeAdded)
+        public void AddRecordInSummary(string summaryTableName, FCTHeader FCTHeaderToBeAdded)
         {
             if (dbConnected)
             {
@@ -333,26 +333,85 @@ namespace JUUL.Manufacture.Database
                         FCTHeaderInSummary.position_id = (string)reader["position_id"];
                         dtInSummary = DateTime.ParseExact(FCTHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
                         dtToBeAdded = DateTime.ParseExact(FCTHeaderToBeAdded.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                        if (FCTHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                        switch (FCTHeaderInSummary.total_test_result.ToUpper())
                         {
-                            if ((FCTHeaderInSummary.total_test_result.ToUpper() == "FAIL" && dtToBeAdded > dtInSummary) || FCTHeaderInSummary.total_test_result.ToUpper() == "PASS")
-                            {
-                                //Update the records to the fct summary table.
-                                sql = $"UPDATE {summaryTableName} SET " +
-                                    $"total_test_result='{FCTHeaderToBeAdded.total_test_result}', " +
-                                    $"fail_code='{FCTHeaderToBeAdded.fail_code}', " +
-                                    $"start_time='{FCTHeaderToBeAdded.start_time}', " +
-                                    $"tester_id='{FCTHeaderToBeAdded.tester_id}', " +
-                                    $"slot_id='{FCTHeaderToBeAdded.slot_id}', " +
-                                    $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderInSummary.uut_sn}'";
-                                command = new SQLiteCommand(sql, databaseConnection);
-                                command.ExecuteNonQuery();
-                            }
+                            case "FAIL":
+                                if (FCTHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                                {
+                                    //FAIL + FAIL = FAILS
+                                    if (dtToBeAdded < dtInSummary)
+                                    {
+                                        FCTHeaderToBeAdded.total_test_result = "FAILS";
+                                        ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
+                                    }
+                                    else
+                                    {
+                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", FCTHeaderInSummary.uut_sn);
+                                    }
+                                }
+                                else
+                                {
+                                    //The coming result is pass, the summary result changes to "TBD".
+                                    //FAIL + PASS = TBD
+                                    ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "TBD", FCTHeaderInSummary.uut_sn);
+                                }
+                                break;
+                            case "FAILS":
+                                //Only update the test location and test time in summary if the fail result added, no need to change anything if the total result is "FAILS".
+                                if ((FCTHeaderToBeAdded.total_test_result.ToUpper() == "FAIL") && (dtToBeAdded < dtInSummary))
+                                {
+                                    //FAILS + FAIL = FAILS
+                                    FCTHeaderToBeAdded.total_test_result = "FAILS";
+                                    ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
+                                }
+                                break;
+                            case "TBD":
+                                if (FCTHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                                {
+                                    //TBD + FAIL = FAILS
+                                    if (dtToBeAdded < dtInSummary)
+                                    {
+                                        FCTHeaderToBeAdded.total_test_result = "FAILS";
+                                        ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
+                                    }
+                                    else
+                                    {
+                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", FCTHeaderInSummary.uut_sn);
+                                    }
+                                }
+                                else
+                                {
+                                    //The coming result is pass, the summary result changes to "PASSES".
+                                    //TBD + PASS = PASSES
+                                    FCTHeaderToBeAdded.total_test_result = "PASSES";
+                                    ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
+                                }
+                                break;
+                            case "PASS":
+                                if (FCTHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                                {
+                                    //PASS + FAIL = TBD
+                                    FCTHeaderToBeAdded.total_test_result = "TBD";
+                                    ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
+                                }
+                                else
+                                {
+                                    //The coming result is pass, the summary result changes to "PASSES".
+                                    //PASS + PASS = PASSES
+                                    ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "PASSES", FCTHeaderInSummary.uut_sn);
+                                }
+                                break;
+                            case "PASSES":
+                                //No need to change anything.
+                                break;
+                            default:
+                                break;
                         }
+
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
+                        throw;
                     }
                 }
                 else
@@ -379,7 +438,7 @@ namespace JUUL.Manufacture.Database
             }
         }
 
-        public void AddRowForSummary(string summaryTableName, SFGHeader SFGHeaderToBeAdded)
+        public void AddRecordInSummary(string summaryTableName, SFGHeader SFGHeaderToBeAdded)
         {
             if (dbConnected)
             {
@@ -401,20 +460,79 @@ namespace JUUL.Manufacture.Database
                         SFGHeaderInSummary.position_id = (string)reader["position_id"];
                         dtInSummary = DateTime.ParseExact(SFGHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
                         dtToBeAdded = DateTime.ParseExact(SFGHeaderToBeAdded.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                        if (SFGHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                        switch (SFGHeaderInSummary.total_test_result.ToUpper())
                         {
-                            if ((SFGHeaderInSummary.total_test_result.ToUpper() == "FAIL" && dtToBeAdded > dtInSummary) || SFGHeaderInSummary.total_test_result.ToUpper() == "PASS")
-                            {
-                                //Update the records to the SFG summary table.
-                                sql = $"UPDATE {summaryTableName} SET " +
-                                    $"total_test_result='{SFGHeaderToBeAdded.total_test_result}', " +
-                                    $"fail_code='{SFGHeaderToBeAdded.fail_code}', " +
-                                    $"start_time='{SFGHeaderToBeAdded.start_time}', " +
-                                    $"tester_id='{SFGHeaderToBeAdded.tester_id}', " +
-                                    $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderInSummary.uut_sn}'";
-                                command = new SQLiteCommand(sql, databaseConnection);
-                                command.ExecuteNonQuery();
-                            }
+                            case "FAIL":
+                                if (SFGHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                                {
+                                    //FAIL + FAIL = FAILS
+                                    if (dtToBeAdded < dtInSummary)
+                                    {
+                                        SFGHeaderToBeAdded.total_test_result = "FAILS";
+                                        ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
+                                    }
+                                    else
+                                    {
+                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", SFGHeaderInSummary.uut_sn);
+                                    }
+                                }
+                                else
+                                {
+                                    //The coming result is pass, the summary result changes to "TBD".
+                                    //FAIL + PASS = TBD
+                                    ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "TBD", SFGHeaderInSummary.uut_sn);
+                                }
+                                break;
+                            case "FAILS":
+                                //Only update the test location and test time in summary if the fail result added, no need to change anything if the total result is "FAILS".
+                                if ((SFGHeaderToBeAdded.total_test_result.ToUpper() == "FAIL") && (dtToBeAdded < dtInSummary))
+                                {
+                                    //FAILS + FAIL = FAILS
+                                    SFGHeaderToBeAdded.total_test_result = "FAILS";
+                                    ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
+                                }
+                                break;
+                            case "TBD":
+                                if (SFGHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                                {
+                                    //TBD + FAIL = FAILS
+                                    if (dtToBeAdded < dtInSummary)
+                                    {
+                                        SFGHeaderToBeAdded.total_test_result = "FAILS";
+                                        ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
+                                    }
+                                    else
+                                    {
+                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", SFGHeaderInSummary.uut_sn);
+                                    }
+                                }
+                                else
+                                {
+                                    //The coming result is pass, the summary result changes to "PASSES".
+                                    //TBD + PASS = PASSES
+                                    SFGHeaderToBeAdded.total_test_result = "PASSES";
+                                    ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
+                                }
+                                break;
+                            case "PASS":
+                                if (SFGHeaderToBeAdded.total_test_result.ToUpper() == "FAIL")
+                                {
+                                    //PASS + FAIL = TBD
+                                    SFGHeaderToBeAdded.total_test_result = "TBD";
+                                    ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
+                                }
+                                else
+                                {
+                                    //The coming result is pass, the summary result changes to "PASSES".
+                                    //PASS + PASS = PASSES
+                                    ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "PASSES", SFGHeaderInSummary.uut_sn);
+                                }
+                                break;
+                            case "PASSES":
+                                //No need to change anything.
+                                break;
+                            default:
+                                break;
                         }
                     }
                     catch (Exception ex)
@@ -442,6 +560,65 @@ namespace JUUL.Manufacture.Database
                         throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
                     }
                 }
+            }
+        }
+
+        private void ChangeRowInSummary_SQL(string summaryTableName, FCTHeader FCTHeaderToBeAdded)
+        {
+            string sql="";
+            SQLiteCommand command;
+            try
+            {
+                sql = $"UPDATE {summaryTableName} SET " +
+                    $"total_test_result='{FCTHeaderToBeAdded.total_test_result}', " +
+                    $"fail_code='{FCTHeaderToBeAdded.fail_code}', " +
+                    $"start_time='{FCTHeaderToBeAdded.start_time}', " +
+                    $"tester_id='{FCTHeaderToBeAdded.tester_id}', " +
+                    $"slot_id='{FCTHeaderToBeAdded.slot_id}', " +
+                    $"position_id='{FCTHeaderToBeAdded.position_id}' WHERE uut_sn='{FCTHeaderToBeAdded.uut_sn}'";
+                command = new SQLiteCommand(sql, databaseConnection);
+                command.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
+            }
+        }
+
+        private void ChangeRowInSummary_SQL(string summaryTableName, SFGHeader SFGHeaderToBeAdded)
+        {
+            string sql = "";
+            SQLiteCommand command;
+            try
+            {
+                sql = $"UPDATE {summaryTableName} SET " +
+                    $"total_test_result='{SFGHeaderToBeAdded.total_test_result}', " +
+                    $"fail_code='{SFGHeaderToBeAdded.fail_code}', " +
+                    $"start_time='{SFGHeaderToBeAdded.start_time}', " +
+                    $"tester_id='{SFGHeaderToBeAdded.tester_id}', " +
+                    $"position_id='{SFGHeaderToBeAdded.position_id}' WHERE uut_sn='{SFGHeaderToBeAdded.uut_sn}'";
+                command = new SQLiteCommand(sql, databaseConnection);
+                command.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
+            }
+        }
+
+        private void ChangeValueInSummary_SQL(string summaryTableName, string columnName, string value, string targetSN)
+        {
+            string sql = "";
+            SQLiteCommand command;
+            try
+            {
+                sql = $"UPDATE {summaryTableName} SET {columnName}='{value}' WHERE uut_sn='{targetSN}'";
+                command = new SQLiteCommand(sql, databaseConnection);
+                command.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
             }
         }
 

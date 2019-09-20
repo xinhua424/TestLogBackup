@@ -1,4 +1,10 @@
-﻿Version 1.1.0.0
+﻿Version 1.1.2.0
+Verify the DUT's serial number length, if the length isn't as expected, skip the log.
+
+Version 1.1.1.0
+Fix the bugs in total result judgement in summary table.
+
+Version 1.1.0.0
 Add the summary table for FCT and SFG station, the summary table contains the final judgement of 2 out of 3 sets rule.
 
 Version 1.0.1.0
