@@ -29,8 +29,6 @@ namespace JUUL.Manufacture.Database
 
         private Dictionary<string, string> fctSummaryNames = new Dictionary<string, string>();
         private Dictionary<string, string> sfgSummaryNames = new Dictionary<string, string>();
-        private Dictionary<string, object> fctSummaryValuesToBeAdded = new Dictionary<string, object>();
-        private Dictionary<string, object> sfgSummaryValuesToBeAdded = new Dictionary<string, object>();
 
         public struct FCTHeader
         {
@@ -55,20 +53,26 @@ namespace JUUL.Manufacture.Database
 
         public MTEDatabaseSetup(string workspace, string dbName)
         {
+            this.workspace = workspace;
+            this.databaseName = dbName;
+            Directory.CreateDirectory(this.workspace);
+            this.databaseFullPath = Path.Combine(this.workspace, this.databaseName);
+        }
+
+        public void InitializeVariables()
+        {
             SetFCTMeasurement();
             SetFCTSummary();
             SetSFGMeasurement();
             SetSFGSummary();
             SetFG00Measurement();
             SetFG24Measurement();
-            this.workspace = workspace;
-            this.databaseName = dbName;
-            Directory.CreateDirectory(workspace);
-            this.databaseFullPath = Path.Combine(this.workspace, this.databaseName);
+
         }
 
         private void SetFCTMeasurement()
         {
+            fctMeasuremenNames.Add("record_id", "INTEGER PRIMARY KEY");
             fctMeasuremenNames.Add("uut_sn", "varchar(20)");
             fctMeasuremenNames.Add("total_test_result", "varchar(5)");
             fctMeasuremenNames.Add("fail_code", "varchar(10)");
@@ -97,6 +101,7 @@ namespace JUUL.Manufacture.Database
 
         private void SetFCTSummary()
         {
+            fctSummaryNames.Add("record_id", "INTEGER PRIMARY KEY");
             fctSummaryNames.Add("uut_sn", "varchar(20)");
             fctSummaryNames.Add("total_test_result", "varchar(10)");
             fctSummaryNames.Add("fail_code", "varchar(10)");
@@ -108,6 +113,7 @@ namespace JUUL.Manufacture.Database
 
         private void SetSFGMeasurement()
         {
+            sfgMeasuremenNames.Add("record_id", "INTEGER PRIMARY KEY");
             sfgMeasuremenNames.Add("uut_sn", "varchar(20)");
             sfgMeasuremenNames.Add("total_test_result", "varchar(5)");
             sfgMeasuremenNames.Add("fail_code", "varchar(10)");
@@ -133,6 +139,7 @@ namespace JUUL.Manufacture.Database
 
         private void SetSFGSummary()
         {
+            sfgSummaryNames.Add("record_id", "INTEGER PRIMARY KEY");
             sfgSummaryNames.Add("uut_sn", "varchar(20)");
             sfgSummaryNames.Add("total_test_result", "varchar(10)");
             sfgSummaryNames.Add("fail_code", "varchar(10)");
@@ -143,6 +150,7 @@ namespace JUUL.Manufacture.Database
 
         private void SetFG00Measurement()
         {
+            fg00MeasuremenNames.Add("record_id", "INTEGER PRIMARY KEY");
             fg00MeasuremenNames.Add("uut_sn", "varchar(20)");
             fg00MeasuremenNames.Add("total_test_result", "varchar(5)");
             fg00MeasuremenNames.Add("fail_code", "varchar(10)");
@@ -168,6 +176,7 @@ namespace JUUL.Manufacture.Database
 
         private void SetFG24Measurement()
         {
+            fg24MeasuremenNames.Add("record_id", "INTEGER PRIMARY KEY");
             fg24MeasuremenNames.Add("uut_sn", "varchar(20)");
             fg24MeasuremenNames.Add("total_test_result", "varchar(5)");
             fg24MeasuremenNames.Add("fail_code", "varchar(10)");
@@ -298,15 +307,16 @@ namespace JUUL.Manufacture.Database
                 default:
                     break;
             }
+            string sql="";
             try
             {
-                string sql = $"insert into {tableName} ({variableNames}) values ({values})";
+                sql = $"insert into {tableName} ({variableNames}) values ({values})";
                 SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
                 command.ExecuteNonQuery();
             }
-            catch
+            catch (Exception ex)
             {
-                throw;
+                throw new Exception(ex.Message + Environment.NewLine + "SQL command: " + sql + Environment.NewLine + ex.StackTrace);
             }
         }
 
@@ -407,11 +417,10 @@ namespace JUUL.Manufacture.Database
                             default:
                                 break;
                         }
-
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        throw;
+                        throw new Exception(ex.Message+ex.StackTrace);
                     }
                 }
                 else
@@ -630,6 +639,10 @@ namespace JUUL.Manufacture.Database
                 try
                 {
                     string[] lines = File.ReadAllLines(logFullPath);
+                    if (lines.Length < 17)
+                    {
+                        return false;
+                    }
                     switch (sc)
                     {
                         case StationCategory.FCT:
@@ -650,6 +663,13 @@ namespace JUUL.Manufacture.Database
                                         if (fctMeasuremenNames[measurementName] == "date")
                                         {
                                             value = "'" + ConvertDateTimeFormat(value) + "'";
+                                        }
+                                        else
+                                        {
+                                            if (value == "NA")
+                                            {
+                                                value="NULL";
+                                            }
                                         }
                                     }
                                     fctMeasurementValues.Add("'" + measurementName + "'", value);
@@ -752,9 +772,9 @@ namespace JUUL.Manufacture.Database
                             throw new Exception($"Invalid station category: {sc}");
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    throw;
+                    throw new Exception(ex.Message + ex.StackTrace);
                 }
             }
             return inserted;
@@ -767,32 +787,39 @@ namespace JUUL.Manufacture.Database
         /// <returns></returns>
         public FCTHeader ParseFCTHeader(string fctFileName)
         {
-            string[] elemInFileName = fctFileName.Split('_');
-            FCTHeader fctHeaderToBeAdded = new FCTHeader();
-            fctHeaderToBeAdded.uut_sn = elemInFileName[0];
-            string result = elemInFileName[1];
-            if (result.Contains("FAIL"))
+            try
             {
-                string[] finalResults = result.Split(new char[] { '[', ']' });
-                fctHeaderToBeAdded.total_test_result = finalResults[0];
-                fctHeaderToBeAdded.fail_code = finalResults[1];
-            }
-            else
-            {
-                if (result == "PASS")
+                string[] elemInFileName = fctFileName.Split('_');
+                FCTHeader fctHeaderToBeAdded = new FCTHeader();
+                fctHeaderToBeAdded.uut_sn = elemInFileName[0];
+                string result = elemInFileName[1];
+                if (result.Contains("FAIL"))
                 {
-                    fctHeaderToBeAdded.total_test_result = result;
+                    string[] finalResults = result.Split(new char[] { '[', ']' });
+                    fctHeaderToBeAdded.total_test_result = finalResults[0];
+                    fctHeaderToBeAdded.fail_code = finalResults[1];
                 }
                 else
                 {
-                    throw new Exception($"Invalid FCT log file name, no \"PASS\" or \"FAIL\" in the file name {fctFileName}.");
+                    if (result == "PASS")
+                    {
+                        fctHeaderToBeAdded.total_test_result = result;
+                    }
+                    else
+                    {
+                        throw new Exception($"Invalid FCT log file name, no \"PASS\" or \"FAIL\" in the file name {fctFileName}.");
+                    }
                 }
+                fctHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
+                fctHeaderToBeAdded.tester_id = elemInFileName[5];
+                fctHeaderToBeAdded.slot_id = elemInFileName[6];
+                fctHeaderToBeAdded.position_id = elemInFileName[7];
+                return fctHeaderToBeAdded;
             }
-            fctHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
-            fctHeaderToBeAdded.tester_id = elemInFileName[5];
-            fctHeaderToBeAdded.slot_id = elemInFileName[6];
-            fctHeaderToBeAdded.position_id = elemInFileName[7];
-            return fctHeaderToBeAdded;
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, fctFileName={fctFileName}, {ex.StackTrace}");
+            }
         }
 
         /// <summary>
@@ -802,31 +829,38 @@ namespace JUUL.Manufacture.Database
         /// <returns></returns>
         public SFGHeader ParseSFGHeader(string sfgFileName)
         {
-            string[] elemInFileName = sfgFileName.Split('_');
-            SFGHeader sfgHeaderToBeAdded = new SFGHeader();
-            sfgHeaderToBeAdded.uut_sn = elemInFileName[0];
-            string result = elemInFileName[2];
-            if (result.Contains("FAIL"))
+            try
             {
-                string[] finalResults = result.Split(new char[] { '[', ']' });
-                sfgHeaderToBeAdded.total_test_result = finalResults[0];
-                sfgHeaderToBeAdded.fail_code = finalResults[1];
-            }
-            else
-            {
-                if (result == "PASS")
+                string[] elemInFileName = sfgFileName.Split('_');
+                SFGHeader sfgHeaderToBeAdded = new SFGHeader();
+                sfgHeaderToBeAdded.uut_sn = elemInFileName[0];
+                string result = elemInFileName[2];
+                if (result.Contains("FAIL"))
                 {
-                    sfgHeaderToBeAdded.total_test_result = result;
+                    string[] finalResults = result.Split(new char[] { '[', ']' });
+                    sfgHeaderToBeAdded.total_test_result = finalResults[0];
+                    sfgHeaderToBeAdded.fail_code = finalResults[1];
                 }
                 else
                 {
-                    throw new Exception($"Invalid SFG log file name, no \"PASS\" or \"FAIL\" in the file name {sfgFileName}.");
+                    if (result == "PASS")
+                    {
+                        sfgHeaderToBeAdded.total_test_result = result;
+                    }
+                    else
+                    {
+                        throw new Exception($"Invalid SFG log file name, no \"PASS\" or \"FAIL\" in the file name {sfgFileName}.");
+                    }
                 }
+                sfgHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
+                sfgHeaderToBeAdded.tester_id = elemInFileName[6];
+                sfgHeaderToBeAdded.position_id = elemInFileName[7];
+                return sfgHeaderToBeAdded;
             }
-            sfgHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
-            sfgHeaderToBeAdded.tester_id = elemInFileName[6];
-            sfgHeaderToBeAdded.position_id = elemInFileName[7];
-            return sfgHeaderToBeAdded;
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sfgFileName={sfgFileName}, {ex.StackTrace}");
+            }
         }
 
         /// <summary>
@@ -836,8 +870,15 @@ namespace JUUL.Manufacture.Database
         /// <returns></returns>
         public static string ConvertDateTimeFormat(string datetime)
         {
-            DateTime dt = DateTime.ParseExact(datetime, "yyyyMMddHHmmssfff", CultureInfo.InvariantCulture);
-            return dt.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            try
+            {
+                DateTime dt = DateTime.ParseExact(datetime, "yyyyMMddHHmmssfff", CultureInfo.InvariantCulture);
+                return dt.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, datetime={datetime}, {ex.StackTrace}");
+            }
         }
 
         /// <summary>
@@ -851,16 +892,17 @@ namespace JUUL.Manufacture.Database
         {
             if(dbConnected)
             {
+                string sql = "";
                 try
                 {
-                    string sql = $"select uut_sn from {tableName} where uut_sn={serialNumber} and start_time={datetime}";
+                    sql = $"select uut_sn from {tableName} where uut_sn={serialNumber} and start_time={datetime}";
                     SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
                     SQLiteDataReader reader = command.ExecuteReader();
                     return reader.HasRows;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    throw;
+                    throw new Exception($"{ex.Message}, sql command: {sql}, {ex.StackTrace}");
                 }
             }
             return true;
@@ -870,16 +912,17 @@ namespace JUUL.Manufacture.Database
         {
             if (dbConnected)
             {
+                string sql="";
                 try
                 {
-                    string sql = $"select uut_sn from {tableName} where uut_sn={serialNumber}";
+                    sql = $"select uut_sn from {tableName} where uut_sn={serialNumber}";
                     SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
                     SQLiteDataReader reader = command.ExecuteReader();
                     return reader.HasRows;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    throw;
+                    throw new Exception($"{ex.Message}, sql command: {sql}, {ex.StackTrace}");
                 }
             }
             return true;
@@ -1012,6 +1055,48 @@ namespace JUUL.Manufacture.Database
             command = new SQLiteCommand(sql, databaseConnection);
             command.ExecuteNonQuery();
         }
+
+        public List<string> GetTesterIDs(string tableName)
+        {
+            return GetDistinctElements(tableName, "tester_id");
+        }
+
+        public List<string> GetErrorCodeList(string tableName)
+        {
+            List<string> errorCodeList = GetDistinctElements(tableName, "fail_code");
+            errorCodeList.Remove("NA");
+            return errorCodeList;
+        }
+
+        private List<string> GetDistinctElements(string tableName, string columnName)
+        {
+            if (tableName == string.Empty)
+            {
+                return null;
+            }
+            List<string> lElement = new List<string>();
+            string sql = "";
+            try
+            {
+                sql = $"SELECT DISTINCT {columnName} FROM {tableName}";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        lElement.Add((string)reader[columnName]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return lElement;
+        }
+
+        
     }
 
     public enum StationCategory

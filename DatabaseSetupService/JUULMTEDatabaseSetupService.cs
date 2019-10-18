@@ -23,11 +23,11 @@ namespace DatabaseSetupService
         [DllImport("advapi32.dll", SetLastError = true)]
         private static extern bool SetServiceStatus(System.IntPtr handle, ref ServiceStatus serviceStatus);
 
-        readonly string afgLogRootPath = @"D:\Juul Log\TesterLogBackup_RT\Jagwar";
+        readonly string afgLogRootPath = @"D:\Juul Log\TesterLogBackup_RT";
         readonly string pegaLogRootPath = @"D:\TestLog\Jagwar";
         string logRootPath;
 
-        readonly string DatabaseRootFolder = @"D:\JUULMTEDatabase";
+        readonly string DatabaseRootFolder = @"C:\JUULMTEDatabase";
         readonly string JagwarDatabaseFile="Jagwar.db";
         readonly string JagwarPlusDatabaseFile ="JagwarPlus.db";
         readonly string DBTable_Jagwar_FCT = "Jagwar_FCT";
@@ -42,6 +42,8 @@ namespace DatabaseSetupService
         readonly string DBTable_JagwarPlus_SFG_Summary = "JagwarPlus_SFG_Summary";
         readonly string DBTable_JagwarPlus_FG00 = "JagwarPlus_FG00";
         readonly string DBTable_JagwarPlus_FG24 = "JagwarPlus_FG24";
+
+        readonly DateTime StartDate = new DateTime(2019, 10, DateTime.Now.Subtract(TimeSpan.FromDays(1)).Day); //Fetch the logs from 1 day ago.
 
         MTEDatabaseSetup DB_Jagwar, DB_JagwarPlus;
 
@@ -90,7 +92,7 @@ namespace DatabaseSetupService
             Directory.CreateDirectory(@"C:\temp");
 
             // Set up a timer that triggers every minute.
-            timer.Interval = 60000; // 1 minutes
+            timer.Interval = 60000*5; // 5 minutes
             timer.Elapsed += new ElapsedEventHandler(this.OnTimer);
 
             FetchedFileList_FCT = new Dictionary<string, List<string>>();
@@ -108,6 +110,7 @@ namespace DatabaseSetupService
             EventLogWriter("JUUL MTE Database setup service starts.", EventCategory.ServiceStart);
             DB_Jagwar = new MTEDatabaseSetup(DatabaseRootFolder, JagwarDatabaseFile);
             DB_JagwarPlus = new MTEDatabaseSetup(DatabaseRootFolder, JagwarPlusDatabaseFile);
+            DB_Jagwar.InitializeVariables();
             DB_Jagwar.CreateDatabase();
             DB_Jagwar.ConnectDatabase();
             DB_Jagwar.CreateTable(DBTable_Jagwar_FCT, StationCategory.FCT);
@@ -117,6 +120,7 @@ namespace DatabaseSetupService
             DB_Jagwar.CreateTable(DBTable_Jagwar_FG24, StationCategory.FG24);
             DB_Jagwar.CreateFCTSummaryTable(DBTable_Jagwar_FCT_Summary);
             DB_Jagwar.CreateSFGSummaryTable(DBTable_Jagwar_SFG_Summary);
+            DB_JagwarPlus.InitializeVariables();
             DB_JagwarPlus.CreateDatabase();
             DB_JagwarPlus.ConnectDatabase();
             DB_JagwarPlus.CreateTable(DBTable_JagwarPlus_FCT, StationCategory.FCT);
@@ -163,14 +167,18 @@ namespace DatabaseSetupService
                             try
                             {
                                 string[] FCT_TesterPaths = Directory.GetDirectories(oneStationPath);
-                                    //If the service runs the 1st time, go through all of the logs, otherwise, only go through the yesterday and today folder.
-                                    if (FetchedFileList_FCT.Count == 0)
+                                //If the service runs the 1st time, go through all of the logs, otherwise, only go through the yesterday and today folder.
+                                if (FetchedFileList_FCT.Count == 0)
                                 {
                                     foreach (string oneFCTTesterPath in FCT_TesterPaths)
                                     {
                                         string[] dateFoldersInOneFCTTester = Directory.GetDirectories(oneFCTTesterPath);
                                         foreach (string oneDateFolder_FCT in dateFoldersInOneFCTTester)
                                         {
+                                            if(!VerifyFolderDate(oneDateFolder_FCT,StartDate))
+                                            {
+                                                continue;
+                                            }
                                             int fctLogCount_OneDay = FetchLogs_FCT(oneDateFolder_FCT);
                                             Log($"{fctLogCount_OneDay} FCT logs are fetched from {oneFCTTesterPath.Split('\\').Last()} {oneDateFolder_FCT.Split('\\').Last()} into database.");
                                             fctLogOverallCount += fctLogCount_OneDay;
@@ -187,6 +195,10 @@ namespace DatabaseSetupService
                                         string[] dateFoldersInOneFCTTester = Directory.GetDirectories(oneFCTTesterPath);
                                         foreach (string oneDateFolder_FCT in dateFoldersInOneFCTTester)
                                         {
+                                            if (!VerifyFolderDate(oneDateFolder_FCT, StartDate))
+                                            {
+                                                continue;
+                                            }
                                             string folderName = oneDateFolder_FCT.Split('\\').Last();
                                             if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
                                             {
@@ -221,6 +233,10 @@ namespace DatabaseSetupService
                                         string[] dateFoldersInOneSFGTester = Directory.GetDirectories(oneSFGTesterPath);
                                         foreach (string oneDateFolder_SFG in dateFoldersInOneSFGTester)
                                         {
+                                            if (!VerifyFolderDate(oneDateFolder_SFG, StartDate))
+                                            {
+                                                continue;
+                                            }
                                             int sfgLogCount_OneDay = FetchLogs_SFG(oneDateFolder_SFG);
                                             Log($"{sfgLogCount_OneDay} SFG logs are fetched from {oneSFGTesterPath.Split('\\').Last()} {oneDateFolder_SFG.Split('\\').Last()} into database.");
                                             sfgLogOverallCount += sfgLogCount_OneDay;
@@ -237,6 +253,10 @@ namespace DatabaseSetupService
                                         string[] dateFoldersInOneSFGTester = Directory.GetDirectories(oneSFGTesterPath);
                                         foreach (string oneDateFolder_SFG in dateFoldersInOneSFGTester)
                                         {
+                                            if (!VerifyFolderDate(oneDateFolder_SFG, StartDate))
+                                            {
+                                                continue;
+                                            }
                                             string folderName = oneDateFolder_SFG.Split('\\').Last();
                                             if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
                                             {
@@ -271,6 +291,10 @@ namespace DatabaseSetupService
                                         string[] dateFoldersInOneFG00Tester = Directory.GetDirectories(oneFG00TesterPath);
                                         foreach (string oneDateFolder_FG00 in dateFoldersInOneFG00Tester)
                                         {
+                                            if (!VerifyFolderDate(oneDateFolder_FG00, StartDate))
+                                            {
+                                                continue;
+                                            }
                                             int fg00LogCount_OneDay = FetchLogs_FG00(oneDateFolder_FG00);
                                             Log($"{fg00LogCount_OneDay} FG00 logs are fetched from {oneFG00TesterPath.Split('\\').Last()} {oneDateFolder_FG00.Split('\\').Last()} into database.");
                                             fg00LogOverallCount += fg00LogCount_OneDay;
@@ -287,6 +311,10 @@ namespace DatabaseSetupService
                                         string[] dateFoldersInOneFG00Tester = Directory.GetDirectories(oneFG00TesterPath);
                                         foreach (string oneDateFolder_FG00 in dateFoldersInOneFG00Tester)
                                         {
+                                            if (!VerifyFolderDate(oneDateFolder_FG00, StartDate))
+                                            {
+                                                continue;
+                                            }
                                             string folderName = oneDateFolder_FG00.Split('\\').Last();
                                             if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
                                             {
@@ -321,6 +349,10 @@ namespace DatabaseSetupService
                                         string[] dateFoldersInOneFG24Tester = Directory.GetDirectories(oneFG24TesterPath);
                                         foreach (string oneDateFolder_FG24 in dateFoldersInOneFG24Tester)
                                         {
+                                            if (!VerifyFolderDate(oneDateFolder_FG24, StartDate))
+                                            {
+                                                continue;
+                                            }
                                             int fg24LogCount_OneDay = FetchLogs_FG24(oneDateFolder_FG24);
                                             Log($"{fg24LogCount_OneDay} FG24 logs are fetched from {oneFG24TesterPath.Split('\\').Last()} {oneDateFolder_FG24.Split('\\').Last()} into database.");
                                             fg24LogOverallCount += fg24LogCount_OneDay;
@@ -337,6 +369,10 @@ namespace DatabaseSetupService
                                         string[] dateFoldersInOneFG24Tester = Directory.GetDirectories(oneFG24TesterPath);
                                         foreach (string oneDateFolder_FG24 in dateFoldersInOneFG24Tester)
                                         {
+                                            if (!VerifyFolderDate(oneDateFolder_FG24, StartDate))
+                                            {
+                                                continue;
+                                            }
                                             string folderName = oneDateFolder_FG24.Split('\\').Last();
                                             if ((folderName.Contains(date_yesterday) && checkYesterday) || folderName.Contains(date_today))
                                             {
@@ -400,37 +436,44 @@ namespace DatabaseSetupService
             string[] filePaths = Directory.GetFiles(folder);
             foreach (string oneFilePath in filePaths)
             {
-                string fileName = oneFilePath.Split('\\').Last();
-                if (!FetchedFileList_FCT[date].Contains(fileName))
+                try
                 {
-                    //The file isn't in the fetched file list, add the file name to the list.
-                    FetchedFileList_FCT[date].Add(fileName);
-                    string[] elemInFileName = fileName.Split('_');
-                    string sn = elemInFileName[0];
-                    if (sn.Trim().Length < 10) //The serial number length is 15 in AFG.
+                    string fileName = oneFilePath.Split('\\').Last();
+                    if (!FetchedFileList_FCT[date].Contains(fileName))
                     {
-                        continue;
-                    }
-                    string project = elemInFileName[2].ToUpper();
-                    string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[9]);
+                        //The file isn't in the fetched file list, add the file name to the list.
+                        FetchedFileList_FCT[date].Add(fileName);
+                        string[] elemInFileName = fileName.Split('_');
+                        string sn = elemInFileName[0];
+                        if (sn.Trim().Length < 10) //The serial number length is 15 in AFG.
+                        {
+                            continue;
+                        }
+                        string project = elemInFileName[2].ToUpper();
+                        string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[9]);
 
-                    bool newRecord;
-                    if (project == "JAGWAR" || project == "JAGWARC")
-                    {
-                        newRecord = DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FCT, StationCategory.FCT, oneFilePath);
-                        MTEDatabaseSetup.FCTHeader fctInformation = DB_Jagwar.ParseFCTHeader(fileName);
-                        DB_Jagwar.AddRecordInSummary(DBTable_Jagwar_FCT_Summary, fctInformation);
+                        bool newRecord = false;
+                        if (project == "JAGWAR" || project == "JAGWARC")
+                        {
+                            newRecord = DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FCT, StationCategory.FCT, oneFilePath);
+                            MTEDatabaseSetup.FCTHeader fctInformation = DB_Jagwar.ParseFCTHeader(fileName);
+                            DB_Jagwar.AddRecordInSummary(DBTable_Jagwar_FCT_Summary, fctInformation);
+                        }
+                        else
+                        {
+                            newRecord = DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FCT, StationCategory.FCT, oneFilePath);
+                            MTEDatabaseSetup.FCTHeader fctInformation = DB_JagwarPlus.ParseFCTHeader(fileName);
+                            DB_JagwarPlus.AddRecordInSummary(DBTable_JagwarPlus_FCT_Summary, fctInformation);
+                        }
+                        if (newRecord)
+                        {
+                            count++;
+                        }
                     }
-                    else
-                    {
-                        newRecord = DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FCT, StationCategory.FCT, oneFilePath);
-                        MTEDatabaseSetup.FCTHeader fctInformation = DB_JagwarPlus.ParseFCTHeader(fileName);
-                        DB_JagwarPlus.AddRecordInSummary(DBTable_JagwarPlus_FCT_Summary, fctInformation);
-                    }
-                    if (newRecord)
-                    {
-                        count++;
-                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"Error happens in fetching FCT log {oneFilePath}, {ex.Message}, {ex.StackTrace}");
                 }
             }
             return count;
@@ -447,35 +490,42 @@ namespace DatabaseSetupService
             string[] filePaths = Directory.GetFiles(folder);
             foreach (string oneFilePath in filePaths)
             {
-                string fileName = oneFilePath.Split('\\').Last();
-                if (!FetchedFileList_SFG[date].Contains(fileName))
+                try
                 {
-                    //The file isn't in the fetched file list, add the file name to the list.
-                    FetchedFileList_SFG[date].Add(fileName);
-                    string[] elemInFileName = fileName.Split('_');
-                    string sn = elemInFileName[0];
-                    if (sn.Trim().Length < 10)  //The serial number is 15.
+                    string fileName = oneFilePath.Split('\\').Last();
+                    if (!FetchedFileList_SFG[date].Contains(fileName))
                     {
-                        continue;
-                    }
-                    string project = elemInFileName[3].ToUpper();
-                    string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[9]);
+                        //The file isn't in the fetched file list, add the file name to the list.
+                        FetchedFileList_SFG[date].Add(fileName);
+                        string[] elemInFileName = fileName.Split('_');
+                        string sn = elemInFileName[0];
+                        if (sn.Trim().Length < 10)  //The serial number is 15.
+                        {
+                            continue;
+                        }
+                        string project = elemInFileName[3].ToUpper();
+                        string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[9]);
 
-                    bool newRecord;
-                    if (project == "JAGWAR" || project == "JAGWARC")
-                    {
-                        newRecord=DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_SFG, StationCategory.SFG, oneFilePath);
-                        MTEDatabaseSetup.SFGHeader sfgInformation = DB_Jagwar.ParseSFGHeader(fileName);
-                        DB_Jagwar.AddRecordInSummary(DBTable_Jagwar_SFG_Summary, sfgInformation);
+                        bool newRecord;
+                        if (project == "JAGWAR" || project == "JAGWARC")
+                        {
+                            newRecord = DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_SFG, StationCategory.SFG, oneFilePath);
+                            MTEDatabaseSetup.SFGHeader sfgInformation = DB_Jagwar.ParseSFGHeader(fileName);
+                            DB_Jagwar.AddRecordInSummary(DBTable_Jagwar_SFG_Summary, sfgInformation);
+                        }
+                        else
+                        {
+                            newRecord = DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_SFG, StationCategory.SFG, oneFilePath);
+                            MTEDatabaseSetup.SFGHeader sfgInformation = DB_JagwarPlus.ParseSFGHeader(fileName);
+                            DB_JagwarPlus.AddRecordInSummary(DBTable_JagwarPlus_SFG_Summary, sfgInformation);
+                        }
+                        if (newRecord)
+                            count++;
                     }
-                    else
-                    {
-                        newRecord=DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_SFG, StationCategory.SFG, oneFilePath);
-                        MTEDatabaseSetup.SFGHeader sfgInformation = DB_JagwarPlus.ParseSFGHeader(fileName);
-                        DB_JagwarPlus.AddRecordInSummary(DBTable_JagwarPlus_SFG_Summary, sfgInformation);
-                    }
-                    if (newRecord)
-                        count++;
+                }
+                catch (Exception ex)
+                {
+                    Log($"Error happens in fetching SFG log {oneFilePath}, {ex.Message}, {ex.StackTrace}");
                 }
             }
             return count;
@@ -492,31 +542,38 @@ namespace DatabaseSetupService
             string[] filePaths = Directory.GetFiles(folder);
             foreach (string oneFilePath in filePaths)
             {
-                string fileName = oneFilePath.Split('\\').Last();
-                if (!FetchedFileList_FG00[date].Contains(fileName))
+                try
                 {
-                    //The file isn't in the fetched file list, add the file name to the list.
-                    FetchedFileList_FG00[date].Add(fileName);
-                    string[] elemInFileName = fileName.Split('_');
-                    string sn = elemInFileName[0];
-                    if (sn.Trim().Length != 8)
+                    string fileName = oneFilePath.Split('\\').Last();
+                    if (!FetchedFileList_FG00[date].Contains(fileName))
                     {
-                        continue;
-                    }
-                    string project = elemInFileName[2].ToUpper();
-                    string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[8]);
+                        //The file isn't in the fetched file list, add the file name to the list.
+                        FetchedFileList_FG00[date].Add(fileName);
+                        string[] elemInFileName = fileName.Split('_');
+                        string sn = elemInFileName[0];
+                        if (sn.Trim().Length != 8)
+                        {
+                            continue;
+                        }
+                        string project = elemInFileName[2].ToUpper();
+                        string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[8]);
 
-                    bool newRecord;
-                    if (project == "JAGWAR" || project == "JAGWARC")
-                    {
-                        newRecord=DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FG00, StationCategory.FG00, oneFilePath);
+                        bool newRecord;
+                        if (project == "JAGWAR" || project == "JAGWARC")
+                        {
+                            newRecord = DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FG00, StationCategory.FG00, oneFilePath);
+                        }
+                        else
+                        {
+                            newRecord = DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FG00, StationCategory.FG00, oneFilePath);
+                        }
+                        if (newRecord)
+                            count++;
                     }
-                    else
-                    {
-                        newRecord=DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FG00, StationCategory.FG00, oneFilePath);
-                    }
-                    if (newRecord)
-                        count++;
+                }
+                catch (Exception ex)
+                {
+                    Log($"Error happens in fetching FG00 log {oneFilePath}, {ex.Message}, {ex.StackTrace}");
                 }
             }
             return count;
@@ -533,34 +590,64 @@ namespace DatabaseSetupService
             string[] filePaths = Directory.GetFiles(folder);
             foreach (string oneFilePath in filePaths)
             {
-                string fileName = oneFilePath.Split('\\').Last();
-                if (!FetchedFileList_FG24[date].Contains(fileName))
+                try
                 {
-                    //The file isn't in the fetched file list, add the file name to the list.
-                    FetchedFileList_FG24[date].Add(fileName);
-                    string[] elemInFileName = fileName.Split('_');
-                    string sn = elemInFileName[0];
-                    if (sn.Trim().Length != 8)
+                    string fileName = oneFilePath.Split('\\').Last();
+                    if (!FetchedFileList_FG24[date].Contains(fileName))
                     {
-                        continue;
-                    }
-                    string project = elemInFileName[2].ToUpper();
-                    string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[8]);
+                        //The file isn't in the fetched file list, add the file name to the list.
+                        FetchedFileList_FG24[date].Add(fileName);
+                        string[] elemInFileName = fileName.Split('_');
+                        string sn = elemInFileName[0];
+                        if (sn.Trim().Length != 8)
+                        {
+                            continue;
+                        }
+                        string project = elemInFileName[2].ToUpper();
+                        string datetime = MTEDatabaseSetup.ConvertDateTimeFormat(elemInFileName[8]);
 
-                    bool newRecord;
-                    if (project == "JAGWAR" || project == "JAGWARC")
-                    {
-                        newRecord=DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FG24, StationCategory.FG24, oneFilePath);
+                        bool newRecord;
+                        if (project == "JAGWAR" || project == "JAGWARC")
+                        {
+                            newRecord = DB_Jagwar.ParseLogIntoDB(DBTable_Jagwar_FG24, StationCategory.FG24, oneFilePath);
+                        }
+                        else
+                        {
+                            newRecord = DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FG24, StationCategory.FG24, oneFilePath);
+                        }
+                        if (newRecord)
+                            count++;
                     }
-                    else
-                    {
-                        newRecord=DB_JagwarPlus.ParseLogIntoDB(DBTable_JagwarPlus_FG24, StationCategory.FG24, oneFilePath);
-                    }
-                    if (newRecord)
-                        count++;
+                }
+                catch (Exception ex)
+                {
+                    Log($"Error happens in fetching FG24 log {oneFilePath}, {ex.Message}, {ex.StackTrace}");
                 }
             }
             return count;
+        }
+
+        /// <summary>
+        /// Parse the folder name to date, if the according date is after the desired date, return true, otherwise false.
+        /// </summary>
+        /// <param name="folderFullPath">The full path of the folder, the folder name should be in the format of yyyy-MM-dd.</param>
+        /// <param name="dtThreshold">The desired date.</param>
+        /// <returns></returns>
+        public bool VerifyFolderDate(string folderFullPath,DateTime dtThreshold)
+        {
+            DateTime dtFolderCreated;
+            string date = folderFullPath.Split('\\').Last();
+            if(date.Length<10)
+            {
+                return false;
+            }
+            string folderName = date.Substring(0, 10);
+            bool success= DateTime.TryParseExact(folderName, "yyyy-MM-dd", CultureInfo.InvariantCulture,DateTimeStyles.None, out dtFolderCreated);
+            if(success && dtFolderCreated >= StartDate)
+            {
+                return true;
+            }
+            return false;
         }
 
         public static void Log(string logMessage)

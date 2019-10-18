@@ -1,14 +1,29 @@
-﻿Version 1.1.2.0
-Verify the DUT's serial number length, if the length isn't as expected, skip the log.
+﻿Version 1.1.5.0
+- Fix the FCT parsing bug. If the result is "NA", skip the measurement.
+- Add the primary key in each table.
+
+Version 1.1.4.0
+- Handle exceptions in MTEDatabaseSetup.cs. 
+- Handle the exception for each log parsing, and log the exception information.
+
+Version 1.1.3.1
+- Separate out the variable initialization in database from MTEDatabaseSetup class constructor.
+- Change the timer interval to be 5 minutes.
+
+Version 1.1.3.0
+- Add the feature of verifying the date folder, if the date is ahead of the desired date, skip fetching the logs to database.
+
+Version 1.1.2.0
+- Verify the DUT's serial number length, if the length isn't as expected, skip the log.
 
 Version 1.1.1.0
-Fix the bugs in total result judgement in summary table.
+- Fix the bugs in total result judgement in summary table.
 
 Version 1.1.0.0
-Add the summary table for FCT and SFG station, the summary table contains the final judgement of 2 out of 3 sets rule.
+- Add the summary table for FCT and SFG station, the summary table contains the final judgement of 2 out of 3 sets rule.
 
 Version 1.0.1.0
-Run the async log parsing tasks for each station.
+- Run the async log parsing tasks for each station.
 
 Version 1.0.0.0
-Initialization version.
+- Initialization version.
