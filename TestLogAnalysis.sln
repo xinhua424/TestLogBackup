@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseSetupService", "Dat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseSetupDesktop", "DatabaseSetupDesktop\DatabaseSetupDesktop.csproj", "{9279439F-B462-4184-92B7-F9D14A0D7307}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeppaPig", "PeppaPig\PeppaPig.csproj", "{54A5B833-93A1-4277-B110-2A03B9378911}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TesterFailRateMonitor", "TesterFailRateMonitor\TesterFailRateMonitor.csproj", "{2D88524B-B5AD-4399-AD0B-586EBE614621}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +49,14 @@ Global
 		{9279439F-B462-4184-92B7-F9D14A0D7307}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9279439F-B462-4184-92B7-F9D14A0D7307}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9279439F-B462-4184-92B7-F9D14A0D7307}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54A5B833-93A1-4277-B110-2A03B9378911}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54A5B833-93A1-4277-B110-2A03B9378911}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54A5B833-93A1-4277-B110-2A03B9378911}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54A5B833-93A1-4277-B110-2A03B9378911}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D88524B-B5AD-4399-AD0B-586EBE614621}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D88524B-B5AD-4399-AD0B-586EBE614621}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D88524B-B5AD-4399-AD0B-586EBE614621}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D88524B-B5AD-4399-AD0B-586EBE614621}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

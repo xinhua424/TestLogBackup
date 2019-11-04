@@ -43,7 +43,7 @@ namespace DatabaseSetupService
         readonly string DBTable_JagwarPlus_FG00 = "JagwarPlus_FG00";
         readonly string DBTable_JagwarPlus_FG24 = "JagwarPlus_FG24";
 
-        readonly DateTime StartDate = new DateTime(2019, 10, DateTime.Now.Subtract(TimeSpan.FromDays(1)).Day); //Fetch the logs from 1 day ago.
+        readonly DateTime StartDate = DateTime.Now.Subtract(TimeSpan.FromDays(1)); //Fetch the logs from 1 day ago.
 
         MTEDatabaseSetup DB_Jagwar, DB_JagwarPlus;
 

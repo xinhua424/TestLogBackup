@@ -66,9 +66,10 @@ namespace JagwarRetestDetection_Local
             }
             cmbStation.SelectedIndex = 0;
         }
+
         private void BtDetectRetest_Click(object sender, EventArgs e)
         {
-            RecordWriter = new StreamWriter(@"C:\temp\RetestResult.txt");
+            RecordWriter = new StreamWriter(@"C:\temp\RetestResult_"+cmbStation.Text+DateTime.Now.ToString("yyyyMMddhhmmss")+"_.txt");
             tbRecord.Text = "";
             DateTime dtStartDate, dtEndDate;
             dtStartDate = dtpStartDate.Value;
@@ -146,7 +147,7 @@ namespace JagwarRetestDetection_Local
                 //Retest is NOT allowed in FG00 or FG24 station.
                 foreach (KeyValuePair<string, List<SingleResultWOSN>> kvp in testResults)
                 {
-                    if (kvp.Value.Count > 1 && kvp.Key != "")
+                    if (kvp.Value.Count > 1 && kvp.Key.Trim() != "")
                     {
                         if (filterKnownRetesting)
                         {

@@ -1,4 +1,11 @@
-﻿Version 1.1.5.0
+﻿Version 1.1.7.0
+- Fix the bug for start time setting.
+
+Version 1.1.6.0
+- Add accelerometer result in the FCT table.
+- Change the final result judgement logic, the final result follows the last fail EC and test time.
+
+Version 1.1.5.0
 - Fix the FCT parsing bug. If the result is "NA", skip the measurement.
 - Add the primary key in each table.
 

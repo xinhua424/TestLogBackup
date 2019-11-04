@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Data.SQLite;
 using System.Globalization;
+using System.Data;
 
 namespace JUUL.Manufacture.Database
 {
@@ -59,6 +60,11 @@ namespace JUUL.Manufacture.Database
             this.databaseFullPath = Path.Combine(this.workspace, this.databaseName);
         }
 
+        public MTEDatabaseSetup(string dbFullPath)
+        {
+            this.databaseFullPath = dbFullPath;
+        }
+
         public void InitializeVariables()
         {
             SetFCTMeasurement();
@@ -67,7 +73,6 @@ namespace JUUL.Manufacture.Database
             SetSFGSummary();
             SetFG00Measurement();
             SetFG24Measurement();
-
         }
 
         private void SetFCTMeasurement()
@@ -97,6 +102,9 @@ namespace JUUL.Manufacture.Database
             fctMeasuremenNames.Add("ambient_sensor_pressure", "int");
             fctMeasuremenNames.Add("puff_sensor_temperature", "int");
             fctMeasuremenNames.Add("ambient_sensor_temperature", "int");
+            fctMeasuremenNames.Add("acc_x", "int");
+            fctMeasuremenNames.Add("acc_y", "int");
+            fctMeasuremenNames.Add("acc_z", "int");
         }
 
         private void SetFCTSummary()
@@ -351,12 +359,12 @@ namespace JUUL.Manufacture.Database
                                     //FAIL + FAIL = FAILS
                                     if (dtToBeAdded < dtInSummary)
                                     {
-                                        FCTHeaderToBeAdded.total_test_result = "FAILS";
-                                        ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
+                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", FCTHeaderInSummary.uut_sn);
                                     }
                                     else
                                     {
-                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", FCTHeaderInSummary.uut_sn);
+                                        FCTHeaderToBeAdded.total_test_result = "FAILS";
+                                        ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
                                     }
                                 }
                                 else
@@ -381,12 +389,12 @@ namespace JUUL.Manufacture.Database
                                     //TBD + FAIL = FAILS
                                     if (dtToBeAdded < dtInSummary)
                                     {
-                                        FCTHeaderToBeAdded.total_test_result = "FAILS";
-                                        ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
+                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", FCTHeaderInSummary.uut_sn);
                                     }
                                     else
                                     {
-                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", FCTHeaderInSummary.uut_sn);
+                                        FCTHeaderToBeAdded.total_test_result = "FAILS";
+                                        ChangeRowInSummary_SQL(summaryTableName, FCTHeaderToBeAdded);
                                     }
                                 }
                                 else
@@ -477,12 +485,12 @@ namespace JUUL.Manufacture.Database
                                     //FAIL + FAIL = FAILS
                                     if (dtToBeAdded < dtInSummary)
                                     {
-                                        SFGHeaderToBeAdded.total_test_result = "FAILS";
-                                        ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
+                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", SFGHeaderInSummary.uut_sn);
                                     }
                                     else
                                     {
-                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", SFGHeaderInSummary.uut_sn);
+                                        SFGHeaderToBeAdded.total_test_result = "FAILS";
+                                        ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
                                     }
                                 }
                                 else
@@ -507,12 +515,12 @@ namespace JUUL.Manufacture.Database
                                     //TBD + FAIL = FAILS
                                     if (dtToBeAdded < dtInSummary)
                                     {
-                                        SFGHeaderToBeAdded.total_test_result = "FAILS";
-                                        ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
+                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", SFGHeaderInSummary.uut_sn);
                                     }
                                     else
                                     {
-                                        ChangeValueInSummary_SQL(summaryTableName, "total_test_result", "FAILS", SFGHeaderInSummary.uut_sn);
+                                        SFGHeaderToBeAdded.total_test_result = "FAILS";
+                                        ChangeRowInSummary_SQL(summaryTableName, SFGHeaderToBeAdded);
                                     }
                                 }
                                 else
@@ -1068,6 +1076,454 @@ namespace JUUL.Manufacture.Database
             return errorCodeList;
         }
 
+        public string[] GetDateTimeRange(string tableName)
+        {
+            string startDateTime = "";
+            string endDateTime = "";
+            if (tableName == string.Empty)
+            {
+                return null;
+            }
+            string sql = "";
+            try
+            {
+                sql = $"SELECT min(start_time) FROM {tableName}";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    startDateTime = (string)reader["min(start_time)"];
+                }
+                sql = $"SELECT max(start_time) FROM {tableName}";
+                command = new SQLiteCommand(sql, databaseConnection);
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    endDateTime = (string)reader["max(start_time)"];
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return new string[] { startDateTime,endDateTime};
+        }
+
+        public List<string> GetTestersByLineByDateTime(string tableName, List<string> lines, DateTime dtStart, DateTime dtEnd)
+        {
+            List<string> testers = new List<string>();
+            if (tableName == string.Empty && dtStart < dtEnd || lines.Count==0)
+            {
+                return null;
+            }
+            string subcommand="";
+            for(int i=0;i<lines.Count;i++)
+            {
+                subcommand += $"line_id='{lines.ElementAt(i)}'";
+                if(i<lines.Count-1)
+                {
+                    subcommand += " OR ";
+                }
+            }
+            string sql = "";
+            try
+            {
+                sql = $"SELECT DISTINCT(tester_id) FROM {tableName} " +
+                    $"WHERE (start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH-mm-ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH-mm-ss.sss")}') " +
+                    $"AND ({subcommand})";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        testers.Add((string)reader["tester_id"]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+
+            return testers;
+        }
+        public List<string> GetLinesByDateTime(string tableName, DateTime dtStart, DateTime dtEnd)
+        {
+            return this.GetDistinctElementsByDateTime(tableName, "line_id", dtStart, dtEnd);
+        }
+
+        public List<string> GetDistinctElementsByDateTime(string tableName, string columnName, DateTime dtStart, DateTime dtEnd)
+        {
+            List<string> result = new List<string>();
+            if (tableName == string.Empty && dtStart<dtEnd)
+            {
+                return null;
+            }
+            string sql = "";
+            try
+            {
+                sql = $"SELECT DISTINCT({columnName}) FROM {tableName} WHERE start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        result.Add((string)reader[columnName]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return result;
+        }
+
+        public List<string> GetDistinctErrorCodesByPositionByDateTime(string tableName, string lineId, string testerId, string positionId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return null;
+            }
+            List<string> errorcodes = new List<string>();
+            string sql = "";
+            try
+            {
+                sql = $"SELECT DISTINCT(fail_code) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='FAIL' AND line_id='{lineId}' AND tester_id='{testerId}' AND position_id='{positionId}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        errorcodes.Add((string)reader["fail_code"]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return errorcodes;
+        }
+
+        public List<string> GetDistinctErrorCodesByLineByTesterByDateTime(string tableName, string lineId, string testerId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return null;
+            }
+            List<string> errorcodes = new List<string>();
+            string sql = "";
+            try
+            {
+                sql = $"SELECT DISTINCT(fail_code) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='FAIL' AND line_id='{lineId}' AND tester_id='{testerId}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        errorcodes.Add((string)reader["fail_code"]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return errorcodes;
+        }
+
+        public List<string> GetDistinctErrorCodesByLineByDateTime(string tableName, string lineId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return null;
+            }
+            List<string> errorcodes = new List<string>();
+            string sql = "";
+            try
+            {
+                sql = $"SELECT DISTINCT(fail_code) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='FAIL' AND line_id='{lineId}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        errorcodes.Add((string)reader["fail_code"]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return errorcodes;
+        }
+
+
+        public int GetErrorCodeQuantityByPositionByDateTime(string tableName, string lineId, string testerId, string positionId, string errorcode, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            
+            string sql = "";
+            try
+            {
+                sql = $"SELECT COUNT(fail_code) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='FAIL' AND line_id='{lineId}' AND tester_id='{testerId}' AND position_id='{positionId}' AND fail_code='{errorcode}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        return int.Parse(reader["COUNT(fail_code)"].ToString());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetErrorCodeQuantityByLineByTesterByDateTime(string tableName, string lineId, string testerId, string errorcode, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+
+            string sql = "";
+            try
+            {
+                sql = $"SELECT COUNT(fail_code) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='FAIL' AND line_id='{lineId}' AND tester_id='{testerId}' AND fail_code='{errorcode}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        return int.Parse(reader["COUNT(fail_code)"].ToString());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetErrorCodeQuantityByLineByDateTime(string tableName, string lineId, string errorcode, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+
+            string sql = "";
+            try
+            {
+                sql = $"SELECT COUNT(fail_code) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='FAIL' AND line_id='{lineId}' AND fail_code='{errorcode}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        return int.Parse(reader["COUNT(fail_code)"].ToString());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetInputQuantityByPositionByDate(string tableName, string lineId, string testerId, string positionId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            string sql = "";
+            try
+            {
+                //Get the total test result count of the desired line id, tester id and position id.
+                sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND line_id='{lineId}' AND tester_id='{testerId}' AND position_id='{positionId}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    return int.Parse(reader["COUNT(total_test_result)"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetInputQuantityByLineByTesterByDate(string tableName, string lineId, string testerId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            string sql = "";
+            try
+            {
+                //Get the total test result count of the desired line id, tester id.
+                sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND line_id='{lineId}' AND tester_id='{testerId}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    return int.Parse(reader["COUNT(total_test_result)"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetInputQuantityByLineByDate(string tableName, string lineId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            string sql = "";
+            try
+            {
+                //Get the total test result count of the desired line id.
+                sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND line_id='{lineId}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    return int.Parse(reader["COUNT(total_test_result)"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetFailureQuantityByPositionByDate(string tableName, string lineId, string testerId, string positionId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            string sql = "";
+            try
+            {
+                //Get the total test result count of the desired line id, tester id and position id.
+                sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND line_id='{lineId}' AND tester_id='{testerId}' AND position_id='{positionId}' AND total_test_result='FAIL'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    return int.Parse(reader["COUNT(total_test_result)"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetFailureQuantityByLineByTesterByDate(string tableName, string lineId, string testerId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            string sql = "";
+            try
+            {
+                //Get the total test result count of the desired line id, tester id and position id.
+                sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND line_id='{lineId}' AND tester_id='{testerId}' AND total_test_result='FAIL'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    return int.Parse(reader["COUNT(total_test_result)"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetFailureQuantityByLineByDate(string tableName, string lineId, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            string sql = "";
+            try
+            {
+                //Get the total test result count of the desired line id, tester id and position id.
+                sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND line_id='{lineId}' AND total_test_result='FAIL'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    return int.Parse(reader["COUNT(total_test_result)"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
         private List<string> GetDistinctElements(string tableName, string columnName)
         {
             if (tableName == string.Empty)
@@ -1096,6 +1552,43 @@ namespace JUUL.Manufacture.Database
             return lElement;
         }
 
+        public DefectsBreakDown GetDefectsBreakdownOfPosition(string tableName, string lineId, string testerId, string positionId, DateTime dtStart, DateTime dtEnd)
+        {
+            DefectsBreakDown result = new DefectsBreakDown();
+            result.inputCount = this.GetInputQuantityByPositionByDate(tableName, lineId, testerId, positionId, dtStart, dtEnd);
+            result.failureCount = this.GetFailureQuantityByPositionByDate(tableName, lineId, testerId, positionId, dtStart, dtEnd);
+            List<string> errorcodes = this.GetDistinctErrorCodesByPositionByDateTime(tableName, lineId, testerId, positionId, dtStart, dtEnd);
+            Dictionary<string, int> defectPattern = new Dictionary<string, int>();
+            foreach(string errorcode in errorcodes)
+            {
+                int failureCount = this.GetErrorCodeQuantityByPositionByDateTime(tableName, lineId, testerId, positionId, errorcode, dtStart, dtEnd);
+                defectPattern.Add(errorcode, failureCount);
+            }
+            result.lineId = lineId;
+            result.testerId = testerId;
+            result.positionId = positionId;
+            result.FailurePattern= defectPattern.OrderByDescending(x => x.Value).ToDictionary(pair => pair.Key, pair => pair.Value);
+            return result;
+        }
+
+        public DefectsBreakDown GetDefectsBreakdownOfTester(string tableName, string lineId, string testerId, DateTime dtStart, DateTime dtEnd)
+        {
+            DefectsBreakDown result = new DefectsBreakDown();
+            result.inputCount = this.GetInputQuantityByLineByTesterByDate(tableName, lineId, testerId, dtStart, dtEnd);
+            result.failureCount = this.GetFailureQuantityByLineByTesterByDate(tableName, lineId, testerId, dtStart, dtEnd);
+            List<string> errorcodes = this.GetDistinctErrorCodesByLineByTesterByDateTime(tableName, lineId, testerId, dtStart, dtEnd);
+            Dictionary<string, int> defectPattern = new Dictionary<string, int>();
+            foreach (string errorcode in errorcodes)
+            {
+                int failureCount = this.GetErrorCodeQuantityByLineByTesterByDateTime(tableName, lineId, testerId, errorcode, dtStart, dtEnd);
+                defectPattern.Add(errorcode, failureCount);
+            }
+            result.lineId = lineId;
+            result.testerId = testerId;
+            result.positionId = "ALL";
+            result.FailurePattern = defectPattern.OrderByDescending(x => x.Value).ToDictionary(pair => pair.Key, pair => pair.Value);
+            return result;
+        }
         
     }
 
@@ -1105,5 +1598,25 @@ namespace JUUL.Manufacture.Database
         SFG = 2,
         FG00 = 3,
         FG24 = 4,
+    }
+
+    public class DefectsBreakDown
+    {
+        public string lineId;
+        public string testerId;
+        public string positionId;
+        public int inputCount;
+        public int failureCount;
+        public Dictionary<string, int> FailurePattern;
+
+        public DefectsBreakDown()
+        {
+            lineId = "";
+            testerId = "";
+            positionId = "";
+            inputCount = 0;
+            failureCount = 0;
+            FailurePattern = new Dictionary<string, int>();
+        }
     }
 }
