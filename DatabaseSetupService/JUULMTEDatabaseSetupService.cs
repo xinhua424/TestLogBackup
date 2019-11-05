@@ -45,6 +45,8 @@ namespace DatabaseSetupService
 
         readonly DateTime StartDate = DateTime.Now.Subtract(TimeSpan.FromDays(1)); //Fetch the logs from 1 day ago.
 
+        private readonly object logFileLock = new object();
+
         MTEDatabaseSetup DB_Jagwar, DB_JagwarPlus;
 
         private Dictionary<string, List<string>> FetchedFileList_FCT, FetchedFileList_SFG, FetchedFileList_FG00, FetchedFileList_FG24;
@@ -650,11 +652,14 @@ namespace DatabaseSetupService
             return false;
         }
 
-        public static void Log(string logMessage)
+        public void Log(string logMessage)
         {
-            LogWriter.Write($"{DateTime.Now.ToLongDateString()} {DateTime.Now.ToLongTimeString()}: ");
-            LogWriter.WriteLine($"{logMessage}");
-            LogWriter.Flush();
+            lock (logFileLock)
+            {
+                LogWriter.Write($"{DateTime.Now.ToLongDateString()} {DateTime.Now.ToLongTimeString()}: ");
+                LogWriter.WriteLine($"{logMessage}");
+                LogWriter.Flush();
+            }
         }
 
         public void EventLogWriter(string message, EventCategory eventid)

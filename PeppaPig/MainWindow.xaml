@@ -32,7 +32,7 @@
             <DatePicker x:Name="dtpStartDate" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTime_Changed"/>
             <Label x:Name="label1" Content="End Date:" Margin="5,5,0,0" VerticalAlignment="Top"/>
             <DatePicker x:Name="dtpEndDate" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTime_Changed"/>
-            <Label Content="Lines" Margin="5" Grid.Column="0"/>
+            <Label Content="Lines" Margin="5,5,0,0" Grid.Column="0"/>
             <ListBox x:Name="listBoxLines"  Height="200" Margin="5,0,0,0" VerticalAlignment="Stretch" 
                      ItemsSource="{Binding}" SelectionMode="Multiple" ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <ListBox.ItemContainerStyle>
@@ -47,7 +47,10 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <Label Content="Testers" Margin="5,0,0,0"/>
+            <StackPanel Orientation="Vertical" Margin="5,5,0,0">
+                <Label Content="Testers" Margin="0"/>
+                <CheckBox x:Name="cbSelectAllTester" Content="Select All" Margin="5,0,0,0" IsThreeState="True" IsChecked="{Binding AllSelected}"/>
+            </StackPanel>
             <ListBox x:Name="listBoxTesters" Margin="5" MinHeight="200"
                      ItemsSource="{Binding}" SelectionMode="Multiple" ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <ListBox.ItemContainerStyle>
@@ -63,7 +66,10 @@
                 </ListBox.ItemTemplate>
             </ListBox>
         </StackPanel>
-        <Label Content="Pareto Chart:" Grid.Row="1" Grid.Column="2" Margin="5"/>
+        <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal">
+            <Label Content="Pareto Chart:" Margin="5"/>
+            <CheckBox x:Name="cbByPosition" Content="By position" Margin="20,0,0,0" VerticalAlignment="Center" IsThreeState="False"/>
+        </StackPanel>
 
         <ListView x:Name="lvParetoChart" Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Margin="10" Background="LightGray" HorizontalAlignment="Center"
                   ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">

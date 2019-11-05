@@ -21,6 +21,7 @@ using Microsoft.Win32;
 using System.Data.SQLite;
 using JUUL.Manufacture.Database;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace PeppaPig
 {
@@ -35,8 +36,10 @@ namespace PeppaPig
         string activeTableName;
         DateTime? desiredStartDateTime, desiredEndDateTime;
         ObservableCollection<Line> availableLineList = new ObservableCollection<Line>();
-        ObservableCollection<Tester> availableTesterList = new ObservableCollection<Tester>();
+        //ObservableCollection<Tester> availableTesterList = new ObservableCollection<Tester>();
         Dictionary<string, List<string>> TesterMap;
+        TesterList testList = new TesterList();
+
 
         public MainWindow()
         {
@@ -48,7 +51,12 @@ namespace PeppaPig
             this.cmbStations.IsEnabled = false;
             this.lvParetoChart.ItemsSource = dtTesterPareto.DefaultView;
             this.listBoxLines.ItemsSource = availableLineList;
-            this.listBoxTesters.ItemsSource = availableTesterList;
+            this.listBoxTesters.ItemsSource = testList.availableTesterList;
+
+            Binding binding = new Binding();
+            binding.Source = testList;
+            binding.Path = new PropertyPath("AllSelected");
+            BindingOperations.SetBinding(this.cbSelectAllTester, CheckBox.IsCheckedProperty, binding);
         }
 
         private void InitializeDataTable()
@@ -126,7 +134,7 @@ namespace PeppaPig
         {
             Dictionary<string, List<string>> FATPTesterMap = new Dictionary<string, List<string>>();
 
-            string[] mapLines = File.ReadAllLines("AFGTesterMap.csv");
+            string[] mapLines = File.ReadAllLines("TesterMap.csv");
             foreach (string s in mapLines)
             {
                 string[] t = s.Split(',');
@@ -174,7 +182,7 @@ namespace PeppaPig
             List<string> selectedLines = (from line in availableLineList
                                           where line.IsSelected == true
                                           select line.LineID).ToList();
-            List<string> selectedTesters = (from tester in availableTesterList
+            List<string> selectedTesters = (from tester in testList.availableTesterList
                                             where tester.IsSelected == true
                                             select tester.TesterID).ToList();
             desiredStartDateTime = this.dtpStartDate.SelectedDate;
@@ -186,23 +194,6 @@ namespace PeppaPig
             dtTesterPareto.Rows.Clear();
 
             //Get the data by slot.
-            //foreach (string line in selectedLines)
-            //{
-            //    foreach (string tester in selectedTesters)
-            //    {
-            //        //Only query the data if the tester is in the correct line.
-            //        if (TesterMap[line].Contains(tester))
-            //        {
-            //            for (int position = 1; position <= 4; position++)
-            //            {
-            //                DefectsBreakDown defectPattern = myDatabase.GetDefectsBreakdownOfPosition(activeTableName, line, tester, position.ToString(), desiredStartDateTime.Value, desiredEndDateTime.Value);
-            //                this.AddRowToDataTable(defectPattern);
-            //            }
-            //        }
-            //    }
-            //}
-
-            // Get the data by tester.
             foreach (string line in selectedLines)
             {
                 foreach (string tester in selectedTesters)
@@ -210,10 +201,21 @@ namespace PeppaPig
                     //Only query the data if the tester is in the correct line.
                     if (TesterMap[line].Contains(tester))
                     {
-
-                        DefectsBreakDown defectPattern = myDatabase.GetDefectsBreakdownOfTester(activeTableName, line, tester, desiredStartDateTime.Value, desiredEndDateTime.Value);
-                        this.AddRowToDataTable(defectPattern);
-
+                        if (this.cbByPosition.IsChecked.Value)
+                        {
+                            for (int position = 1; position <= 4; position++)
+                            {
+                                //Get the data by position.
+                                DefectsBreakDown defectPattern = myDatabase.GetDefectsBreakdownOfPosition(activeTableName, line, tester, position.ToString(), desiredStartDateTime.Value, desiredEndDateTime.Value);
+                                this.AddRowToDataTable(defectPattern);
+                            }
+                        }
+                        else
+                        {
+                            //Get the data by tester.
+                            DefectsBreakDown defectPattern = myDatabase.GetDefectsBreakdownOfTester(activeTableName, line, tester, desiredStartDateTime.Value, desiredEndDateTime.Value);
+                            this.AddRowToDataTable(defectPattern);
+                        }
                     }
                 }
             }
@@ -249,14 +251,16 @@ namespace PeppaPig
                 //desiredStartDateTime = new DateTime(desiredStartDateTime.Value.Year, desiredStartDateTime.Value.Month, desiredStartDateTime.Value.Day, 0, 0, 0);
                 //desiredEndDateTime = new DateTime(desiredEndDateTime.Value.Year, desiredEndDateTime.Value.Month, desiredEndDateTime.Value.Day, 23, 59, 59);
                 List<string> availableTesters = myDatabase.GetTestersByLineByDateTime(activeTableName, selectedLines, desiredStartDateTime.Value, desiredEndDateTime.Value);
-                availableTesterList.Clear();
+                testList.ClearTesterList();
                 if(availableTesters==null)
                 {
                     return;
                 }
                 foreach (string tester in availableTesters)
                 {
-                    availableTesterList.Add(new Tester { TesterID = tester, IsSelected = false });
+                    Tester newTester = new Tester { TesterID = tester, IsSelected = true };
+                    testList.AddTester(newTester);
+
                 }
             }
         }
@@ -334,12 +338,6 @@ namespace PeppaPig
             dtTesterPareto.Rows.Add(row);
         }
 
-        public class Line
-        {
-            public string LineID { get; set; }
-            public bool IsSelected { get; set; }
-        }
-
         private void MainWindow_Closed(object sender, EventArgs e)
         {
             if (myDatabase != null)
@@ -348,10 +346,147 @@ namespace PeppaPig
             }
         }
 
-        public class Tester
+        public class Line
         {
-            public string TesterID { get; set; }
+            public string LineID { get; set; }
             public bool IsSelected { get; set; }
+        }
+
+        public class Tester:INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler PropertyChanged;
+
+            private bool _isSelected=false;
+            public string TesterID { get; set; }
+            public bool IsSelected 
+            {
+                get { return _isSelected; }
+                set
+                {
+                    _isSelected = value;
+                    OnPropertyChanged();
+                }
+            }
+
+            protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+
+        public class TesterList:INotifyPropertyChanged
+        {
+            private ObservableCollection<Tester> _testerList = new ObservableCollection<Tester>();
+            private bool _allSelectedChanging;
+            private bool? _allSelected;
+            public event PropertyChangedEventHandler PropertyChanged;
+            public ObservableCollection<Tester> availableTesterList
+            {
+                get => _testerList;
+                set 
+                {
+                    if (Equals(_testerList, value)) return;
+                    _testerList = value;
+                    if (this.PropertyChanged != null)
+                    {
+                        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("availableTesterList"));
+                    }
+                }
+            }
+
+            public void ClearTesterList()
+            {
+                foreach(Tester tester in availableTesterList)
+                {
+                    tester.PropertyChanged -= TesterListOnPropertyChanged;
+                }
+                availableTesterList.Clear();
+            }
+
+            public void AddTester(Tester tester)
+            {
+                this.availableTesterList.Add(tester);
+                tester.PropertyChanged += TesterListOnPropertyChanged;
+                RecheckAllSelected();
+            }
+
+            private void TesterListOnPropertyChanged(object sender, PropertyChangedEventArgs args)
+            {
+                // Only re-check if the IsSelected property changed
+                if (args.PropertyName == nameof(Tester.IsSelected))
+                    RecheckAllSelected();
+            }
+
+            private void AllSelectedChanged()
+            {
+                // Has this change been caused by some other change?
+                // return so we don't mess things up
+                if (_allSelectedChanging) return;
+
+                try
+                {
+                    _allSelectedChanging = true;
+
+                    // this can of course be simplified
+                    if (AllSelected == true)
+                    {
+                        foreach (Tester tester in availableTesterList)
+                            tester.IsSelected = true;
+                    }
+                    else if (AllSelected == false)
+                    {
+                        foreach (Tester tester in availableTesterList)
+                            tester.IsSelected = false;
+                    }
+                }
+                finally
+                {
+                    _allSelectedChanging = false;
+                }
+            }
+
+            private void RecheckAllSelected()
+            {
+                // Has this change been caused by some other change?
+                // return so we don't mess things up
+                if (_allSelectedChanging) return;
+
+                try
+                {
+                    _allSelectedChanging = true;
+
+                    if (availableTesterList.All(e => e.IsSelected))
+                        AllSelected = true;
+                    else if (availableTesterList.All(e => !e.IsSelected))
+                        AllSelected = false;
+                    else
+                        AllSelected = null;
+                }
+                finally
+                {
+                    _allSelectedChanging = false;
+                }
+            }
+
+            public bool? AllSelected
+            {
+                get => _allSelected;
+                set
+                {
+                    if (value == _allSelected) return;
+                    _allSelected = value;
+
+                    // Set all other CheckBoxes
+                    AllSelectedChanged();
+                    OnPropertyChanged();
+                }
+            }
+
+            protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
+
         }
     }
 }
