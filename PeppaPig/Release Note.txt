@@ -1,2 +1,5 @@
-﻿V1.0.0.0
+﻿V1.0.1.0
+- Add tab page for yield rate monitor only.
+
+V1.0.0.0
 - Initialized version

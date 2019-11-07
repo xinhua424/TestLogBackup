@@ -26,6 +26,7 @@ namespace DatabaseSetupService
         readonly string afgLogRootPath = @"D:\Juul Log\TesterLogBackup_RT";
         readonly string pegaLogRootPath = @"D:\TestLog\Jagwar";
         string logRootPath;
+        private int fgSnLength = 8;
 
         readonly string DatabaseRootFolder = @"C:\JUULMTEDatabase";
         readonly string JagwarDatabaseFile="Jagwar.db";
@@ -75,6 +76,7 @@ namespace DatabaseSetupService
                 //AFG
                 logRootPath = afgLogRootPath;
                 Log("The service runs in AFG server.");
+                fgSnLength = 8;
             }
             else
             {
@@ -83,6 +85,7 @@ namespace DatabaseSetupService
                     //Pega
                     logRootPath = pegaLogRootPath;
                     Log("The service runs in Pega server.");
+                    fgSnLength = 14;
                 }
                 else
                 {
@@ -553,7 +556,7 @@ namespace DatabaseSetupService
                         FetchedFileList_FG00[date].Add(fileName);
                         string[] elemInFileName = fileName.Split('_');
                         string sn = elemInFileName[0];
-                        if (sn.Trim().Length != 8)
+                        if (sn.Trim().Length != fgSnLength)
                         {
                             continue;
                         }
@@ -601,7 +604,7 @@ namespace DatabaseSetupService
                         FetchedFileList_FG24[date].Add(fileName);
                         string[] elemInFileName = fileName.Split('_');
                         string sn = elemInFileName[0];
-                        if (sn.Trim().Length != 8)
+                        if (sn.Trim().Length != fgSnLength)
                         {
                             continue;
                         }

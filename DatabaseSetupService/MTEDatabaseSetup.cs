@@ -114,6 +114,7 @@ namespace JUUL.Manufacture.Database
             fctSummaryNames.Add("total_test_result", "varchar(10)");
             fctSummaryNames.Add("fail_code", "varchar(10)");
             fctSummaryNames.Add("start_time", "date");
+            fctSummaryNames.Add("line_id", "varchar(5)");
             fctSummaryNames.Add("tester_id", "varchar(10)");
             fctSummaryNames.Add("slot_id", "varchar(1)");
             fctSummaryNames.Add("position_id", "varchar(1)");
@@ -152,6 +153,7 @@ namespace JUUL.Manufacture.Database
             sfgSummaryNames.Add("total_test_result", "varchar(10)");
             sfgSummaryNames.Add("fail_code", "varchar(10)");
             sfgSummaryNames.Add("start_time", "date");
+            sfgSummaryNames.Add("line_id", "varchar(5)");
             sfgSummaryNames.Add("tester_id", "varchar(10)");
             sfgSummaryNames.Add("position_id", "varchar(1)");
         }
@@ -1271,6 +1273,35 @@ namespace JUUL.Manufacture.Database
             return errorcodes;
         }
 
+        public List<string> GetDistinctErrorCodesByDateTime(string tableName, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return null;
+            }
+            List<string> errorcodes = new List<string>();
+            string sql = "";
+            try
+            {
+                sql = $"SELECT DISTINCT(fail_code) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='FAIL'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        errorcodes.Add((string)reader["fail_code"]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return errorcodes;
+        }
 
         public int GetErrorCodeQuantityByPositionByDateTime(string tableName, string lineId, string testerId, string positionId, string errorcode, DateTime dtStart, DateTime dtEnd)
         {
@@ -1345,6 +1376,36 @@ namespace JUUL.Manufacture.Database
                 sql = $"SELECT COUNT(fail_code) FROM {tableName} WHERE " +
                     $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
                     $"AND total_test_result='FAIL' AND line_id='{lineId}' AND fail_code='{errorcode}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        return int.Parse(reader["COUNT(fail_code)"].ToString());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
+        public int GetErrorCodeQuantityByDateTime(string tableName, string errorcode, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+
+            string sql = "";
+            try
+            {
+                sql = $"SELECT COUNT(fail_code) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='FAIL' AND fail_code='{errorcode}'";
                 SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
                 SQLiteDataReader reader = command.ExecuteReader();
                 if (reader.HasRows)
@@ -1443,6 +1504,32 @@ namespace JUUL.Manufacture.Database
             return 0;
         }
 
+        public int GetInputQuantityByDate(string tableName, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            string sql = "";
+            try
+            {
+                //Get the total test result count of the desired line id.
+                sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}')";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    return int.Parse(reader["COUNT(total_test_result)"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
         public int GetFailureQuantityByPositionByDate(string tableName, string lineId, string testerId, string positionId, DateTime dtStart, DateTime dtEnd)
         {
             if (tableName == string.Empty)
@@ -1524,6 +1611,38 @@ namespace JUUL.Manufacture.Database
             return 0;
         }
 
+        public int GetFailureQuantityByDate(string tableName, DateTime dtStart, DateTime dtEnd)
+        {
+            if (tableName == string.Empty)
+            {
+                return 0;
+            }
+            string sql = "";
+            string failKeyword = "FAIL";
+            if(tableName.Contains("SFG")||tableName.Contains("FCT"))
+            {
+                failKeyword = "FAILS";
+            }
+            try
+            {
+                //Get the total test result count of the desired line id, tester id and position id.
+                sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
+                    $"AND total_test_result='{failKeyword}'";
+                SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
+                SQLiteDataReader reader = command.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    return int.Parse(reader["COUNT(total_test_result)"].ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"{ex.Message}, sql: {sql}, {ex.StackTrace}");
+            }
+            return 0;
+        }
+
         private List<string> GetDistinctElements(string tableName, string columnName)
         {
             if (tableName == string.Empty)
@@ -1589,7 +1708,42 @@ namespace JUUL.Manufacture.Database
             result.FailurePattern = defectPattern.OrderByDescending(x => x.Value).ToDictionary(pair => pair.Key, pair => pair.Value);
             return result;
         }
+
+        public DefectsBreakDown GetDefectsBreakdownOfLine(string tableName, string lineId, DateTime dtStart, DateTime dtEnd)
+        {
+            DefectsBreakDown result = new DefectsBreakDown();
+            result.inputCount = this.GetInputQuantityByLineByDate(tableName, lineId, dtStart, dtEnd);
+            result.failureCount = this.GetFailureQuantityByLineByDate(tableName, lineId, dtStart, dtEnd);
+            List<string> errorcodes = this.GetDistinctErrorCodesByLineByDateTime(tableName, lineId, dtStart, dtEnd);
+            Dictionary<string, int> defectPattern = new Dictionary<string, int>();
+            foreach (string errorcode in errorcodes)
+            {
+                int failureCount = this.GetErrorCodeQuantityByLineByDateTime(tableName, lineId, errorcode, dtStart, dtEnd);
+                defectPattern.Add(errorcode, failureCount);
+            }
+            result.lineId = lineId;
+            result.testerId = "ALL";
+            result.positionId = "ALL";
+            result.FailurePattern = defectPattern.OrderByDescending(x => x.Value).ToDictionary(pair => pair.Key, pair => pair.Value);
+            return result;
+        }
         
+        public YieldRateBreakDown GetYieldRateBreakdown(string tableName, DateTime dtStart, DateTime dtEnd)
+        {
+            YieldRateBreakDown result = new YieldRateBreakDown();
+            result.station = tableName.Split('_')[1];
+            result.inputCount = this.GetInputQuantityByDate(tableName, dtStart, dtEnd);
+            result.failureCount = this.GetFailureQuantityByDate(tableName, dtStart, dtEnd);
+            List<string> errorcodes = this.GetDistinctErrorCodesByDateTime(tableName, dtStart, dtEnd);
+            Dictionary<string, int> defectPattern = new Dictionary<string, int>();
+            foreach (string errorcode in errorcodes)
+            {
+                int failureCount = this.GetErrorCodeQuantityByDateTime(tableName, errorcode, dtStart, dtEnd);
+                defectPattern.Add(errorcode, failureCount);
+            }
+            result.FailurePattern = defectPattern.OrderByDescending(x => x.Value).ToDictionary(pair => pair.Key, pair => pair.Value);
+            return result;
+        }
     }
 
     public enum StationCategory
@@ -1614,6 +1768,22 @@ namespace JUUL.Manufacture.Database
             lineId = "";
             testerId = "";
             positionId = "";
+            inputCount = 0;
+            failureCount = 0;
+            FailurePattern = new Dictionary<string, int>();
+        }
+    }
+
+    public class YieldRateBreakDown
+    {
+        public string station;
+        public int inputCount;
+        public int failureCount;
+        public Dictionary<string, int> FailurePattern;
+
+        public YieldRateBreakDown()
+        {
+            station = "";
             inputCount = 0;
             failureCount = 0;
             FailurePattern = new Dictionary<string, int>();

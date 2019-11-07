@@ -1,4 +1,7 @@
-﻿Version 1.1.7.0
+﻿Version 1.1.8.0
+- Add line_id column in FCT&SFG summary table.
+
+Version 1.1.7.0
 - Fix the bug for start time setting.
 
 Version 1.1.6.0

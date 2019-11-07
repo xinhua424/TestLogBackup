@@ -15,86 +15,160 @@
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="4"/>
             <ColumnDefinition Width="2*"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <TextBlock x:Name="textBlock" Grid.Row="0" Grid.Column="0" Margin="5" TextWrapping="Wrap" Text="Database file:" />
-        <TextBox x:Name="tbDatabaseFilePath" Grid.Row="0" Grid.Column="2" Margin="5" Height="Auto" MinWidth="400"/>
-        <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal">
-            <Button x:Name="btBrowserDatabaseFile" Content="Browser" Width="100" Margin="5" Click="btBrowserDatabaseFile_Click"/>
-            <Button x:Name="btRefresh" Content="Refresh" Width="100" Margin="5" HorizontalAlignment="Right" Click="btRefresh_Click"/>
-        </StackPanel>
-        <StackPanel Grid.Row="2" Grid.Column="0">
-            <Label Content="Stations:" Margin="5,0,0,0"/>
-            <ComboBox x:Name="cmbStations" HorizontalAlignment="Left" Width="80" Margin="5,0,0,5" SelectionChanged="cmbStation_SelectionChanged"/>
-            <Label x:Name="label" Content="Start Date:" Margin="5,5,0,0" VerticalAlignment="Top"/>
-            <DatePicker x:Name="dtpStartDate" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTime_Changed"/>
-            <Label x:Name="label1" Content="End Date:" Margin="5,5,0,0" VerticalAlignment="Top"/>
-            <DatePicker x:Name="dtpEndDate" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTime_Changed"/>
-            <Label Content="Lines" Margin="5,5,0,0" Grid.Column="0"/>
-            <ListBox x:Name="listBoxLines"  Height="200" Margin="5,0,0,0" VerticalAlignment="Stretch" 
-                     ItemsSource="{Binding}" SelectionMode="Multiple" ScrollViewer.VerticalScrollBarVisibility="Auto">
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="{x:Type ListBoxItem}">
-                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                    </Style>
-                </ListBox.ItemContainerStyle>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <CheckBox Content="{Binding LineID}" IsChecked="{Binding IsSelected, Mode=TwoWay}" 
-                                  Checked="listBoxLine_Changed" Unchecked="listBoxLine_Changed"/>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-            <StackPanel Orientation="Vertical" Margin="5,5,0,0">
-                <Label Content="Testers" Margin="0"/>
-                <CheckBox x:Name="cbSelectAllTester" Content="Select All" Margin="5,0,0,0" IsThreeState="True" IsChecked="{Binding AllSelected}"/>
-            </StackPanel>
-            <ListBox x:Name="listBoxTesters" Margin="5" MinHeight="200"
-                     ItemsSource="{Binding}" SelectionMode="Multiple" ScrollViewer.VerticalScrollBarVisibility="Auto">
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="{x:Type ListBoxItem}">
-                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                    </Style>
-                </ListBox.ItemContainerStyle>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <CheckBox Content="{Binding TesterID}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                  Checked="listBoxTester_Changed" Unchecked="listBoxTester_Changed"/>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </StackPanel>
-        <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal">
-            <Label Content="Pareto Chart:" Margin="5"/>
-            <CheckBox x:Name="cbByPosition" Content="By position" Margin="20,0,0,0" VerticalAlignment="Center" IsThreeState="False"/>
-        </StackPanel>
-
-        <ListView x:Name="lvParetoChart" Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Margin="10" Background="LightGray" HorizontalAlignment="Center"
-                  ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Line" Width="60" DisplayMemberBinding="{Binding LineID}" />
-                    <GridViewColumn Header="Tester" Width="60" DisplayMemberBinding="{Binding TesterID}"/>
-                    <GridViewColumn Header="Position" Width="60" DisplayMemberBinding="{Binding PositionID}"/>
-                    <GridViewColumn Header="Input" Width="60" DisplayMemberBinding="{Binding InputCount}"/>
-                    <GridViewColumn Header="FailCount" Width="60" DisplayMemberBinding="{Binding FailCount}"/>
-                    <GridViewColumn Header="FailRate" Width="60" DisplayMemberBinding="{Binding FailRate}"/>
-                    <GridViewColumn Header="Top1EC" Width="60" DisplayMemberBinding="{Binding Top1EC}"/>
-                    <GridViewColumn Header="Top1Count" Width="80" DisplayMemberBinding="{Binding Top1Count}"/>
-                    <GridViewColumn Header="Top2EC" Width="60" DisplayMemberBinding="{Binding Top2EC}"/>
-                    <GridViewColumn Header="Top2Count" Width="80" DisplayMemberBinding="{Binding Top2Count}"/>
-                    <GridViewColumn Header="Top3EC" Width="60" DisplayMemberBinding="{Binding Top3EC}"/>
-                    <GridViewColumn Header="Top3Count" Width="80" DisplayMemberBinding="{Binding Top3Count}"/>
-                    <GridViewColumn Header="Top4EC" Width="60" DisplayMemberBinding="{Binding Top4EC}"/>
-                    <GridViewColumn Header="Top4Count" Width="80" DisplayMemberBinding="{Binding Top4Count}"/>
-                    <GridViewColumn Header="Top5EC" Width="60" DisplayMemberBinding="{Binding Top5EC}"/>
-                    <GridViewColumn Header="Top5Count" Width="80" DisplayMemberBinding="{Binding Top5Count}"/>
-                </GridView>
-            </ListView.View>
-        </ListView>
+        <TextBox x:Name="tbDatabaseFilePath" Grid.Row="0" Grid.Column="1" Margin="5" Height="Auto" MinWidth="400"/>
+        <Button x:Name="btBrowserDatabaseFile" Content="Browser" Width="100" Grid.Row="0" Grid.Column="2" Margin="5" HorizontalAlignment="Left" Click="btBrowserDatabaseFile_Click"/>
         
+        <TabControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="5">
+            <TabItem Header="Pareto Chart" Width="100" Background="LightGray">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Orientation="Vertical">
+                        <Label Content="Stations:" Margin="5,0,0,0"/>
+                        <ComboBox x:Name="cmbStations" HorizontalAlignment="Left" Width="80" Margin="5,0,0,5" SelectionChanged="cmbStation_SelectionChanged"/>
+                        <Label x:Name="label" Content="Start Date:" Margin="5,5,0,0" VerticalAlignment="Top"/>
+                        <DatePicker x:Name="dtpStartDateForPareto" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTimeForPareto_Changed"/>
+                        <Label x:Name="label1" Content="End Date:" Margin="5,5,0,0" VerticalAlignment="Top"/>
+                        <DatePicker x:Name="dtpEndDateForPareto" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTimeForPareto_Changed"/>
+                        <Label Content="Lines" Margin="5,5,0,0" Grid.Column="0"/>
+                        <ListBox x:Name="listBoxLines"  Height="200" Margin="5,0,0,0" VerticalAlignment="Stretch" 
+                            ItemsSource="{Binding}" SelectionMode="Multiple" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="{x:Type ListBoxItem}">
+                                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding LineID}" IsChecked="{Binding IsSelected, Mode=TwoWay}" 
+                                  Checked="listBoxLine_Changed" Unchecked="listBoxLine_Changed"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <StackPanel Orientation="Vertical" Margin="5,5,0,0">
+                            <Label Content="Testers" Margin="0"/>
+                            <CheckBox x:Name="cbSelectAllTester" Content="Select All" Margin="5,0,0,0" IsThreeState="True" IsChecked="{Binding AllSelected}"/>
+                        </StackPanel>
+                        <ListBox x:Name="listBoxTesters" Margin="5" MinHeight="200"
+                     ItemsSource="{Binding}" SelectionMode="Multiple" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="{x:Type ListBoxItem}">
+                                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding TesterID}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                  Checked="listBoxTester_Changed" Unchecked="listBoxTester_Changed"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="1">
+                        <CheckBox x:Name="cbByPosition" Content="By position" Margin="5,0,0,0" VerticalAlignment="Center" IsThreeState="False"/>
+                        <Button x:Name="btParetoChartRefresh" Content="Refresh" Width="100" Margin="30,0,0,0" HorizontalAlignment="Right" Click="btParetoChartRefresh_Click"/>
+                    </StackPanel>
+                    <ListView x:Name="lvParetoChart" Grid.Row="1" Grid.Column="1" Margin="5" Background="LightGray" HorizontalAlignment="Left"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Line" Width="60" DisplayMemberBinding="{Binding LineID}" />
+                                <GridViewColumn Header="Tester" Width="60" DisplayMemberBinding="{Binding TesterID}"/>
+                                <GridViewColumn Header="Position" Width="60" DisplayMemberBinding="{Binding PositionID}"/>
+                                <GridViewColumn Header="Input" Width="60" DisplayMemberBinding="{Binding InputCount}"/>
+                                <GridViewColumn Header="FailCount" Width="60" DisplayMemberBinding="{Binding FailCount}"/>
+                                <GridViewColumn Header="FailRate" Width="60" DisplayMemberBinding="{Binding FailRate}">
+                                    <!--<GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding FailRate}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>-->
+                                </GridViewColumn>
+
+                                <GridViewColumn Header="Top1EC" Width="60" DisplayMemberBinding="{Binding Top1EC}"/>
+                                <GridViewColumn Header="Top1Count" Width="80" DisplayMemberBinding="{Binding Top1Count}"/>
+                                <GridViewColumn Header="Top2EC" Width="60" DisplayMemberBinding="{Binding Top2EC}"/>
+                                <GridViewColumn Header="Top2Count" Width="80" DisplayMemberBinding="{Binding Top2Count}"/>
+                                <GridViewColumn Header="Top3EC" Width="60" DisplayMemberBinding="{Binding Top3EC}"/>
+                                <GridViewColumn Header="Top3Count" Width="80" DisplayMemberBinding="{Binding Top3Count}"/>
+                                <GridViewColumn Header="Top4EC" Width="60" DisplayMemberBinding="{Binding Top4EC}"/>
+                                <GridViewColumn Header="Top4Count" Width="80" DisplayMemberBinding="{Binding Top4Count}"/>
+                                <GridViewColumn Header="Top5EC" Width="60" DisplayMemberBinding="{Binding Top5EC}"/>
+                                <GridViewColumn Header="Top5Count" Width="80" DisplayMemberBinding="{Binding Top5Count}"/>
+                            </GridView>
+                        </ListView.View>
+                        <ListView.Resources>
+                            <Style TargetType="{x:Type ListViewItem}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding TesterID}" Value="ALL">
+                                        <Setter Property="Foreground" Value="Blue" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListView.Resources>
+                    </ListView>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Yield" Background="Aqua" Width="100">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Orientation="Vertical">
+                        <Label x:Name="label2" Content="Start Date:" Margin="5,5,0,0" VerticalAlignment="Top"/>
+                        <DatePicker x:Name="dtpStartDateForYield" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTimeForPareto_Changed"/>
+                        <Label x:Name="label3" Content="End Date:" Margin="5,5,0,0" VerticalAlignment="Top"/>
+                        <DatePicker x:Name="dtpEndDateForYield" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTimeForPareto_Changed"/>
+                    </StackPanel>
+                    <Button x:Name="btRefreshYield" Content="Refresh" Grid.Row="0" Grid.Column="1" Width="80" HorizontalAlignment="Left" Margin="5" Click="btYieldChartRefresh_Click"/>
+                    <ListView x:Name="lvYieldChart" Grid.Row="1" Grid.Column="1" Margin="5" Background="LightBlue" HorizontalAlignment="Left" Height="500"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Station" Width="60" DisplayMemberBinding="{Binding Station}" />
+                            <GridViewColumn Header="Input" Width="60" DisplayMemberBinding="{Binding InputCount}"/>
+                            <GridViewColumn Header="FailCount" Width="60" DisplayMemberBinding="{Binding FailCount}"/>
+                            <GridViewColumn Header="FailRate" Width="60" DisplayMemberBinding="{Binding FailRate}"/>
+                            <GridViewColumn Header="Top1EC" Width="60" DisplayMemberBinding="{Binding Top1EC}"/>
+                            <GridViewColumn Header="Top1Count" Width="80" DisplayMemberBinding="{Binding Top1Count}"/>
+                            <GridViewColumn Header="Top2EC" Width="60" DisplayMemberBinding="{Binding Top2EC}"/>
+                            <GridViewColumn Header="Top2Count" Width="80" DisplayMemberBinding="{Binding Top2Count}"/>
+                            <GridViewColumn Header="Top3EC" Width="60" DisplayMemberBinding="{Binding Top3EC}"/>
+                            <GridViewColumn Header="Top3Count" Width="80" DisplayMemberBinding="{Binding Top3Count}"/>
+                            <GridViewColumn Header="Top4EC" Width="60" DisplayMemberBinding="{Binding Top4EC}"/>
+                            <GridViewColumn Header="Top4Count" Width="80" DisplayMemberBinding="{Binding Top4Count}"/>
+                            <GridViewColumn Header="Top5EC" Width="60" DisplayMemberBinding="{Binding Top5EC}"/>
+                            <GridViewColumn Header="Top5Count" Width="80" DisplayMemberBinding="{Binding Top5Count}"/>
+                        </GridView>
+                    </ListView.View>
+                    <ListView.Resources>
+                        <Style TargetType="{x:Type ListViewItem}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding FailRate}" Value="ALL">
+                                    <Setter Property="Foreground" Value="Blue" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListView.Resources>
+                </ListView>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>
 
