@@ -1,4 +1,8 @@
-﻿V1.0.1.0
+﻿V1.0.2.0
+- Fix the bug on the quantity of each EC in SFG/FCT station.
+- Add version in the window title.
+
+V1.0.1.0
 - Add tab page for yield rate monitor only.
 
 V1.0.0.0

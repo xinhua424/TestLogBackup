@@ -37,6 +37,7 @@ namespace JUUL.Manufacture.Database
             public string total_test_result;
             public string fail_code;
             public string start_time;
+            public string line_id;
             public string tester_id;
             public string slot_id;
             public string position_id;
@@ -48,6 +49,7 @@ namespace JUUL.Manufacture.Database
             public string total_test_result;
             public string fail_code;
             public string start_time;
+            public string line_id;
             public string tester_id;
             public string position_id;
         }
@@ -348,6 +350,7 @@ namespace JUUL.Manufacture.Database
                         FCTHeaderInSummary.total_test_result = (string)reader["total_test_result"];
                         FCTHeaderInSummary.fail_code = (string)reader["fail_code"];
                         FCTHeaderInSummary.start_time = ((DateTime)reader["start_time"]).ToString("yyyy-MM-dd HH:mm:ss.fff");
+                        FCTHeaderInSummary.line_id = (string)reader["line_id"];
                         FCTHeaderInSummary.tester_id = (string)reader["tester_id"];
                         FCTHeaderInSummary.slot_id = (string)reader["slot_id"];
                         FCTHeaderInSummary.position_id = (string)reader["position_id"];
@@ -438,11 +441,12 @@ namespace JUUL.Manufacture.Database
                     //The SN doesn't exist in the summary table.
                     try
                     {
-                        sql = $"INSERT INTO {summaryTableName} (uut_sn,total_test_result,fail_code,start_time,tester_id,slot_id,position_id) VALUES " +
+                        sql = $"INSERT INTO {summaryTableName} (uut_sn,total_test_result,fail_code,start_time,line_id,tester_id,slot_id,position_id) VALUES " +
                             $"('{FCTHeaderToBeAdded.uut_sn}'," +
                             $"'{FCTHeaderToBeAdded.total_test_result}'," +
                             $"'{FCTHeaderToBeAdded.fail_code}'," +
                             $"'{FCTHeaderToBeAdded.start_time}'," +
+                            $"'{FCTHeaderToBeAdded.line_id}'," +
                             $"'{FCTHeaderToBeAdded.tester_id}'," +
                             $"'{FCTHeaderToBeAdded.slot_id}'," +
                             $"'{FCTHeaderToBeAdded.position_id}')";
@@ -475,6 +479,7 @@ namespace JUUL.Manufacture.Database
                         SFGHeaderInSummary.total_test_result = (string)reader["total_test_result"];
                         SFGHeaderInSummary.fail_code = (string)reader["fail_code"];
                         SFGHeaderInSummary.start_time = ((DateTime)reader["start_time"]).ToString("yyyy-MM-dd HH:mm:ss.fff");
+                        SFGHeaderInSummary.line_id = (string)reader["line_id"];
                         SFGHeaderInSummary.tester_id = (string)reader["tester_id"];
                         SFGHeaderInSummary.position_id = (string)reader["position_id"];
                         dtInSummary = DateTime.ParseExact(SFGHeaderInSummary.start_time, "yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
@@ -564,11 +569,12 @@ namespace JUUL.Manufacture.Database
                     //The SN doesn't exist in the summary table.
                     try
                     {
-                        sql = $"INSERT INTO {summaryTableName} (uut_sn,total_test_result,fail_code,start_time,tester_id,position_id) VALUES " +
+                        sql = $"INSERT INTO {summaryTableName} (uut_sn,total_test_result,fail_code,start_time,line_id,tester_id,position_id) VALUES " +
                             $"('{SFGHeaderToBeAdded.uut_sn}'," +
                             $"'{SFGHeaderToBeAdded.total_test_result}'," +
                             $"'{SFGHeaderToBeAdded.fail_code}'," +
                             $"'{SFGHeaderToBeAdded.start_time}'," +
+                            $"'{SFGHeaderToBeAdded.line_id}'," +
                             $"'{SFGHeaderToBeAdded.tester_id}'," +
                             $"'{SFGHeaderToBeAdded.position_id}')";
                         command = new SQLiteCommand(sql, databaseConnection);
@@ -821,6 +827,7 @@ namespace JUUL.Manufacture.Database
                     }
                 }
                 fctHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
+                fctHeaderToBeAdded.line_id = elemInFileName[4];
                 fctHeaderToBeAdded.tester_id = elemInFileName[5];
                 fctHeaderToBeAdded.slot_id = elemInFileName[6];
                 fctHeaderToBeAdded.position_id = elemInFileName[7];
@@ -863,6 +870,7 @@ namespace JUUL.Manufacture.Database
                     }
                 }
                 sfgHeaderToBeAdded.start_time = ConvertDateTimeFormat(elemInFileName[9]);
+                sfgHeaderToBeAdded.line_id = elemInFileName[5];
                 sfgHeaderToBeAdded.tester_id = elemInFileName[6];
                 sfgHeaderToBeAdded.position_id = elemInFileName[7];
                 return sfgHeaderToBeAdded;
@@ -1273,7 +1281,7 @@ namespace JUUL.Manufacture.Database
             return errorcodes;
         }
 
-        public List<string> GetDistinctErrorCodesByDateTime(string tableName, DateTime dtStart, DateTime dtEnd)
+        public List<string> GetDistinctErrorCodesByDateTime(string tableName, DateTime dtStart, DateTime dtEnd, string excludedLineId)
         {
             if (tableName == string.Empty)
             {
@@ -1281,11 +1289,20 @@ namespace JUUL.Manufacture.Database
             }
             List<string> errorcodes = new List<string>();
             string sql = "";
+            string failKeyword = "FAIL";
+            if (tableName.Contains("SFG") || tableName.Contains("FCT"))
+            {
+                failKeyword = "FAILS";
+            }
             try
             {
                 sql = $"SELECT DISTINCT(fail_code) FROM {tableName} WHERE " +
                     $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
-                    $"AND total_test_result='FAIL'";
+                    $"AND total_test_result='{failKeyword}'";
+                if (excludedLineId != string.Empty)
+                {
+                    sql += $" AND line_id !='{excludedLineId}'";
+                }
                 SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
                 SQLiteDataReader reader = command.ExecuteReader();
                 if (reader.HasRows)
@@ -1393,7 +1410,7 @@ namespace JUUL.Manufacture.Database
             return 0;
         }
 
-        public int GetErrorCodeQuantityByDateTime(string tableName, string errorcode, DateTime dtStart, DateTime dtEnd)
+        public int GetErrorCodeQuantityByDateTime(string tableName, string errorcode, DateTime dtStart, DateTime dtEnd, string excludedLineId)
         {
             if (tableName == string.Empty)
             {
@@ -1401,11 +1418,20 @@ namespace JUUL.Manufacture.Database
             }
 
             string sql = "";
+            string failKeyword = "FAIL";
+            if (tableName.Contains("SFG") || tableName.Contains("FCT"))
+            {
+                failKeyword = "FAILS";
+            }
             try
             {
                 sql = $"SELECT COUNT(fail_code) FROM {tableName} WHERE " +
                     $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
-                    $"AND total_test_result='FAIL' AND fail_code='{errorcode}'";
+                    $"AND total_test_result='{failKeyword}' AND fail_code='{errorcode}'";
+                if (excludedLineId != string.Empty)
+                {
+                    sql += $" AND line_id !='{excludedLineId}'";
+                }
                 SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
                 SQLiteDataReader reader = command.ExecuteReader();
                 if (reader.HasRows)
@@ -1504,7 +1530,7 @@ namespace JUUL.Manufacture.Database
             return 0;
         }
 
-        public int GetInputQuantityByDate(string tableName, DateTime dtStart, DateTime dtEnd)
+        public int GetInputQuantityByDate(string tableName, DateTime dtStart, DateTime dtEnd, string excludedLineId)
         {
             if (tableName == string.Empty)
             {
@@ -1515,7 +1541,11 @@ namespace JUUL.Manufacture.Database
             {
                 //Get the total test result count of the desired line id.
                 sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
-                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}')";
+                    $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}')"; 
+                if(excludedLineId!=string.Empty)
+                {
+                    sql += $" AND line_id !='{excludedLineId}'";
+                }
                 SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
                 SQLiteDataReader reader = command.ExecuteReader();
                 if (reader.HasRows)
@@ -1611,7 +1641,7 @@ namespace JUUL.Manufacture.Database
             return 0;
         }
 
-        public int GetFailureQuantityByDate(string tableName, DateTime dtStart, DateTime dtEnd)
+        public int GetFailureQuantityByDate(string tableName, DateTime dtStart, DateTime dtEnd, string excludedLineId)
         {
             if (tableName == string.Empty)
             {
@@ -1629,6 +1659,10 @@ namespace JUUL.Manufacture.Database
                 sql = $"SELECT COUNT(total_test_result) FROM {tableName} WHERE " +
                     $"(start_time BETWEEN '{dtStart.ToString("yyyy-MM-dd HH:mm:ss.sss")}' AND '{dtEnd.ToString("yyyy-MM-dd HH:mm:ss.sss")}') " +
                     $"AND total_test_result='{failKeyword}'";
+                if (excludedLineId != string.Empty)
+                {
+                    sql += $" AND line_id !='{excludedLineId}'";
+                }
                 SQLiteCommand command = new SQLiteCommand(sql, databaseConnection);
                 SQLiteDataReader reader = command.ExecuteReader();
                 if (reader.HasRows)
@@ -1728,17 +1762,21 @@ namespace JUUL.Manufacture.Database
             return result;
         }
         
-        public YieldRateBreakDown GetYieldRateBreakdown(string tableName, DateTime dtStart, DateTime dtEnd)
+        public YieldRateBreakDown GetYieldRateBreakdown(string tableName, DateTime dtStart, DateTime dtEnd,string excludedLineId)
         {
             YieldRateBreakDown result = new YieldRateBreakDown();
             result.station = tableName.Split('_')[1];
-            result.inputCount = this.GetInputQuantityByDate(tableName, dtStart, dtEnd);
-            result.failureCount = this.GetFailureQuantityByDate(tableName, dtStart, dtEnd);
-            List<string> errorcodes = this.GetDistinctErrorCodesByDateTime(tableName, dtStart, dtEnd);
+            result.inputCount = this.GetInputQuantityByDate(tableName, dtStart, dtEnd, excludedLineId);
+            result.failureCount = this.GetFailureQuantityByDate(tableName, dtStart, dtEnd,excludedLineId);
+            List<string> errorcodes = this.GetDistinctErrorCodesByDateTime(tableName, dtStart, dtEnd,excludedLineId);
             Dictionary<string, int> defectPattern = new Dictionary<string, int>();
+            if(tableName.Contains("FCT"))
+            {
+                excludedLineId = string.Empty;
+            }
             foreach (string errorcode in errorcodes)
             {
-                int failureCount = this.GetErrorCodeQuantityByDateTime(tableName, errorcode, dtStart, dtEnd);
+                int failureCount = this.GetErrorCodeQuantityByDateTime(tableName, errorcode, dtStart, dtEnd, excludedLineId);
                 defectPattern.Add(errorcode, failureCount);
             }
             result.FailurePattern = defectPattern.OrderByDescending(x => x.Value).ToDictionary(pair => pair.Key, pair => pair.Value);

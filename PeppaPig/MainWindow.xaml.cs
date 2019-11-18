@@ -22,6 +22,7 @@ using System.Data.SQLite;
 using JUUL.Manufacture.Database;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Reflection;
 
 namespace PeppaPig
 {
@@ -43,19 +44,22 @@ namespace PeppaPig
         public MainWindow()
         {
             InitializeComponent();
+            this.Title +=string.Format(" - Version {0}",Assembly.GetEntryAssembly().GetName().Version);
             InitializeParetoDataTable();
             InitializeYieldDataTable();
             TesterMap = GetTesterMap();
+            //Update UI for Pareto tab.
             this.dtpStartDateForPareto.IsEnabled = false;
             this.dtpEndDateForPareto.IsEnabled = false;
-            this.dtpStartDateForYield.IsEnabled = false;
-            this.dtpEndDateForYield.IsEnabled = false;
             this.cmbStations.IsEnabled = false;
             this.lvParetoChart.ItemsSource = dtTesterPareto.DefaultView;
             this.listBoxLines.ItemsSource = availableLineList;
             this.listBoxTesters.ItemsSource = testList.availableTesterList;
+            //Update UI for yield tab.
+            this.dtpStartDateForYield.IsEnabled = false;
+            this.dtpEndDateForYield.IsEnabled = false;
             this.lvYieldChart.ItemsSource = dtYield.DefaultView;
-            
+            this.cmbReworkLine.IsEnabled = false;
 
             Binding binding = new Binding();
             binding.Source = testList;
@@ -224,6 +228,10 @@ namespace PeppaPig
             openFileDialog.Filter = "Database files (*.db)|*.db|All files (*.*)|*.*";
             if (openFileDialog.ShowDialog() == true)
                 this.tbDatabaseFilePath.Text = openFileDialog.FileName;
+            if(this.tbDatabaseFilePath.Text==string.Empty)
+            {
+                return;
+            }
             if (this.tbDatabaseFilePath.Text.Split('\\').Last().Contains("JagwarPlus"))
             {
                 projectName = "JagwarPlus";
@@ -259,6 +267,7 @@ namespace PeppaPig
             this.dtpStartDateForYield.DisplayDateEnd = MinEndDate;
             this.dtpEndDateForYield.DisplayDateStart = MaxStartDate;
             this.dtpEndDateForYield.DisplayDateEnd = MinEndDate;
+            this.cmbReworkLine.IsEnabled = true;
         }
 
         private void btParetoChartRefresh_Click(object sender, RoutedEventArgs e)
@@ -320,9 +329,10 @@ namespace PeppaPig
 
             dtYield.Rows.Clear();
             string[] interestedTables = new string[] { $"{projectName}_FCT_Summary", $"{ projectName}_SFG_Summary", $"{projectName}_FG00", $"{projectName}_FG24" };
+            string excludedLineId = this.cmbReworkLine.Text;
             for (int index = 0; index < interestedTables.Length; index++)
             {
-                YieldRateBreakDown yieldrate = myDatabase.GetYieldRateBreakdown(interestedTables[index], desiredStartDateTimeForYield.Value, desiredEndDateTimeForYield.Value);
+                YieldRateBreakDown yieldrate = myDatabase.GetYieldRateBreakdown(interestedTables[index], desiredStartDateTimeForYield.Value, desiredEndDateTimeForYield.Value,excludedLineId);
                 this.AddRowToYieldDataTable(yieldrate);
             }
         }

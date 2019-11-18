@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PeppaPig"
         mc:Ignorable="d"
+        WindowStartupLocation="CenterScreen"
         Title="PeppaPig" Height="800" Width="1200" Closed="MainWindow_Closed">
 
     <Grid Background="Azure">
@@ -134,6 +135,11 @@
                         <DatePicker x:Name="dtpStartDateForYield" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTimeForPareto_Changed"/>
                         <Label x:Name="label3" Content="End Date:" Margin="5,5,0,0" VerticalAlignment="Top"/>
                         <DatePicker x:Name="dtpEndDateForYield" Margin="5,0,0,5" d:LayoutOverrides="Width" SelectedDateChanged="selectDateTimeForPareto_Changed"/>
+                        <Label Content="Rework Line:" Margin="5,5,0,0"/>
+                        <ComboBox x:Name="cmbReworkLine" Margin="5">
+                            <ComboBoxItem>LINE34</ComboBoxItem>
+                            <ComboBoxItem IsSelected="True">L40</ComboBoxItem>
+                        </ComboBox>
                     </StackPanel>
                     <Button x:Name="btRefreshYield" Content="Refresh" Grid.Row="0" Grid.Column="1" Width="80" HorizontalAlignment="Left" Margin="5" Click="btYieldChartRefresh_Click"/>
                     <ListView x:Name="lvYieldChart" Grid.Row="1" Grid.Column="1" Margin="5" Background="LightBlue" HorizontalAlignment="Left" Height="500"
